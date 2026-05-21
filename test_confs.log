@@ -1,0 +1,262 @@
+2026-05-21 10:32:28,493 INFO:main.py:246:print_splash_screen:PDB2PQR v3.7.1: biomolecular structure conversion software.
+2026-05-21 10:32:28,493 INFO:main.py:248:print_splash_screen:Please cite:  Jurrus E, et al.  Improvements to the APBS biomolecular solvation software suite.  Protein Sci 27 112-128 (2018).
+2026-05-21 10:32:28,493 INFO:main.py:248:print_splash_screen:Please cite:  Dolinsky TJ, et al.  PDB2PQR: expanding and upgrading automated preparation of biomolecular structures for molecular simulations. Nucleic Acids Res 35 W522-W525 (2007).
+2026-05-21 10:32:28,493 INFO:main.py:770:main_driver:Checking and transforming input arguments.
+2026-05-21 10:32:28,493 INFO:main.py:774:main_driver:Loading topology files.
+2026-05-21 10:32:28,524 INFO:main.py:776:main_driver:Loading molecule: 1AFW-confs.pdb
+2026-05-21 10:32:28,525 ERROR:pdb.py:2587:read_pdb:Error parsing line: invalid literal for int() with base 10: ''
+2026-05-21 10:32:28,525 ERROR:pdb.py:2588:read_pdb:<REMARK     2>
+2026-05-21 10:32:28,525 ERROR:pdb.py:2589:read_pdb:Truncating remaining errors for record type:REMARK
+2026-05-21 10:32:29,416 WARNING:io.py:474:get_molecule:Warning: 1AFW-confs.pdb is a non-standard PDB file.
+
+2026-05-21 10:32:29,416 ERROR:io.py:475:get_molecule:['REMARK']
+2026-05-21 10:32:29,416 INFO:main.py:781:main_driver:Setting up molecule.
+2026-05-21 10:32:29,442 WARNING:biomolecule.py:995:create_residue:Unable to find amino or nucleic acid definition for MRD.  Parsing as new residue.
+2026-05-21 10:32:29,442 WARNING:biomolecule.py:995:create_residue:Unable to find amino or nucleic acid definition for MRD.  Parsing as new residue.
+2026-05-21 10:32:29,444 INFO:main.py:423:setup_molecule:Created biomolecule object with 1233 residues and 6338 atoms.
+2026-05-21 10:32:29,444 INFO:main.py:785:main_driver:Setting termini states for biomolecule chains.
+2026-05-21 10:32:29,453 WARNING:biomolecule.py:618:update_bonds:Gap in backbone detected between ILE A 262 and GLY A 266!
+2026-05-21 10:32:29,455 INFO:main.py:616:non_trivial:Loading forcefield.
+2026-05-21 10:32:29,461 INFO:main.py:620:non_trivial:Loading hydrogen topology definitions.
+2026-05-21 10:32:29,464 INFO:main.py:474:is_repairable:This biomolecule is clean.  No repair needed.
+2026-05-21 10:32:29,464 INFO:main.py:635:non_trivial:Updating disulfide bridges.
+2026-05-21 10:32:29,465 INFO:main.py:638:non_trivial:Debumping biomolecule.
+2026-05-21 10:32:29,567 INFO:main.py:661:non_trivial:Adding hydrogens to biomolecule.
+2026-05-21 10:32:29,937 INFO:main.py:664:non_trivial:Debumping biomolecule (again).
+2026-05-21 10:32:30,076 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 25
+2026-05-21 10:32:30,077 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 26
+2026-05-21 10:32:30,077 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER A 27
+2026-05-21 10:32:30,160 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 28
+2026-05-21 10:32:30,161 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 29
+2026-05-21 10:32:30,161 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 30
+2026-05-21 10:32:30,162 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 31
+2026-05-21 10:32:30,272 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 33
+2026-05-21 10:32:30,273 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 34
+2026-05-21 10:32:30,274 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 36
+2026-05-21 10:32:30,275 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 38
+2026-05-21 10:32:30,276 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 39
+2026-05-21 10:32:30,277 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 41
+2026-05-21 10:32:30,280 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 48
+2026-05-21 10:32:30,283 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 55
+2026-05-21 10:32:30,283 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP A 56
+2026-05-21 10:32:30,284 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 58
+2026-05-21 10:32:30,290 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 68
+2026-05-21 10:32:30,294 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 76
+2026-05-21 10:32:30,294 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 77
+2026-05-21 10:32:30,296 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG A 79
+2026-05-21 10:32:30,296 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 80
+2026-05-21 10:32:30,296 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP A 81
+2026-05-21 10:32:30,297 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 82
+2026-05-21 10:32:30,297 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 83
+2026-05-21 10:32:30,299 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 85
+2026-05-21 10:32:30,299 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 86
+2026-05-21 10:32:30,299 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 87
+2026-05-21 10:32:30,310 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 113
+2026-05-21 10:32:30,312 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 117
+2026-05-21 10:32:30,331 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR A 156
+2026-05-21 10:32:30,331 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 157
+2026-05-21 10:32:30,334 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 163
+2026-05-21 10:32:30,341 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 165
+2026-05-21 10:32:30,342 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER A 169
+2026-05-21 10:32:30,343 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 171
+2026-05-21 10:32:30,345 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 175
+2026-05-21 10:32:30,347 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG A 177
+2026-05-21 10:32:30,350 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 183
+2026-05-21 10:32:30,351 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump MET A 186
+2026-05-21 10:32:30,353 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR A 189
+2026-05-21 10:32:30,353 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 190
+2026-05-21 10:32:30,355 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 193
+2026-05-21 10:32:30,355 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 194
+2026-05-21 10:32:30,355 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 196
+2026-05-21 10:32:30,356 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PHE A 197
+2026-05-21 10:32:30,357 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 199
+2026-05-21 10:32:30,359 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP A 203
+2026-05-21 10:32:30,360 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 206
+2026-05-21 10:32:30,362 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 210
+2026-05-21 10:32:30,363 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN A 213
+2026-05-21 10:32:30,364 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 214
+2026-05-21 10:32:30,366 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 217
+2026-05-21 10:32:30,367 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 221
+2026-05-21 10:32:30,369 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 225
+2026-05-21 10:32:30,372 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 230
+2026-05-21 10:32:30,373 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 232
+2026-05-21 10:32:30,375 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP A 235
+2026-05-21 10:32:30,375 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER A 237
+2026-05-21 10:32:30,378 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 245
+2026-05-21 10:32:30,379 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 247
+2026-05-21 10:32:30,379 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN A 248
+2026-05-21 10:32:30,438 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 249
+2026-05-21 10:32:30,439 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR A 250
+2026-05-21 10:32:30,439 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 251
+2026-05-21 10:32:30,439 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 252
+2026-05-21 10:32:30,441 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER A 255
+2026-05-21 10:32:30,441 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER A 256
+2026-05-21 10:32:30,442 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG A 258
+2026-05-21 10:32:30,447 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 273
+2026-05-21 10:32:30,447 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN A 275
+2026-05-21 10:32:30,452 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 286
+2026-05-21 10:32:30,454 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG A 288
+2026-05-21 10:32:30,456 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 291
+2026-05-21 10:32:30,502 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN A 293
+2026-05-21 10:32:30,503 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 294
+2026-05-21 10:32:30,504 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 296
+2026-05-21 10:32:30,558 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 298
+2026-05-21 10:32:30,560 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG A 301
+2026-05-21 10:32:30,561 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 303
+2026-05-21 10:32:30,567 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump MET A 315
+2026-05-21 10:32:30,571 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO A 324
+2026-05-21 10:32:30,573 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 327
+2026-05-21 10:32:30,573 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 328
+2026-05-21 10:32:30,574 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR A 330
+2026-05-21 10:32:30,576 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL A 334
+2026-05-21 10:32:30,578 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 337
+2026-05-21 10:32:30,581 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 344
+2026-05-21 10:32:30,582 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 348
+2026-05-21 10:32:30,583 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN A 349
+2026-05-21 10:32:30,583 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA A 350
+2026-05-21 10:32:30,585 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR A 352
+2026-05-21 10:32:30,585 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump CYS A 353
+2026-05-21 10:32:30,586 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 354
+2026-05-21 10:32:30,586 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump HIS A 355
+2026-05-21 10:32:30,588 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 357
+2026-05-21 10:32:30,589 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 359
+2026-05-21 10:32:30,594 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 371
+2026-05-21 10:32:30,597 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU A 377
+2026-05-21 10:32:30,605 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 393
+2026-05-21 10:32:30,607 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE A 397
+2026-05-21 10:32:30,616 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS A 416
+2026-05-21 10:32:30,616 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU A 417
+2026-05-21 10:32:30,617 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 25
+2026-05-21 10:32:30,620 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 27
+2026-05-21 10:32:30,621 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 28
+2026-05-21 10:32:30,624 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 33
+2026-05-21 10:32:30,624 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 34
+2026-05-21 10:32:30,632 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 48
+2026-05-21 10:32:30,632 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLY B 49
+2026-05-21 10:32:30,635 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 56
+2026-05-21 10:32:30,691 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 57
+2026-05-21 10:32:30,699 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLY B 72
+2026-05-21 10:32:30,701 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 75
+2026-05-21 10:32:30,701 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 76
+2026-05-21 10:32:30,704 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG B 79
+2026-05-21 10:32:30,704 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 80
+2026-05-21 10:32:30,710 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 94
+2026-05-21 10:32:30,717 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 113
+2026-05-21 10:32:30,738 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump MET B 155
+2026-05-21 10:32:30,738 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR B 156
+2026-05-21 10:32:30,739 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 157
+2026-05-21 10:32:30,740 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR B 159
+2026-05-21 10:32:30,740 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 160
+2026-05-21 10:32:30,742 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 164
+2026-05-21 10:32:30,742 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 165
+2026-05-21 10:32:30,744 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 169
+2026-05-21 10:32:30,744 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 170
+2026-05-21 10:32:30,745 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 171
+2026-05-21 10:32:30,747 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 175
+2026-05-21 10:32:30,748 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG B 177
+2026-05-21 10:32:30,750 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 181
+2026-05-21 10:32:30,750 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump CYS B 182
+2026-05-21 10:32:30,752 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 184
+2026-05-21 10:32:30,753 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump MET B 186
+2026-05-21 10:32:30,836 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 188
+2026-05-21 10:32:30,837 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR B 189
+2026-05-21 10:32:30,846 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 190
+2026-05-21 10:32:31,313 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 191
+2026-05-21 10:32:31,313 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 192
+2026-05-21 10:32:31,314 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 193
+2026-05-21 10:32:31,314 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 194
+2026-05-21 10:32:31,315 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 195
+2026-05-21 10:32:31,386 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 198
+2026-05-21 10:32:31,456 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 199
+2026-05-21 10:32:31,464 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 200
+2026-05-21 10:32:31,631 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 202
+2026-05-21 10:32:31,631 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 203
+2026-05-21 10:32:31,701 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 204
+2026-05-21 10:32:31,702 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 206
+2026-05-21 10:32:31,703 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PHE B 207
+2026-05-21 10:32:31,703 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 208
+2026-05-21 10:32:31,704 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 210
+2026-05-21 10:32:31,704 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 211
+2026-05-21 10:32:31,705 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR B 212
+2026-05-21 10:32:31,705 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 213
+2026-05-21 10:32:31,706 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 215
+2026-05-21 10:32:31,707 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR B 216
+2026-05-21 10:32:31,709 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 219
+2026-05-21 10:32:31,709 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 220
+2026-05-21 10:32:31,780 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLY B 222
+2026-05-21 10:32:31,780 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 223
+2026-05-21 10:32:31,781 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLU B 225
+2026-05-21 10:32:31,783 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 228
+2026-05-21 10:32:31,784 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 230
+2026-05-21 10:32:31,787 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 234
+2026-05-21 10:32:31,792 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 235
+2026-05-21 10:32:31,866 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 238
+2026-05-21 10:32:31,867 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 240
+2026-05-21 10:32:31,867 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 242
+2026-05-21 10:32:31,869 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG B 246
+2026-05-21 10:32:31,871 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 253
+2026-05-21 10:32:31,872 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 254
+2026-05-21 10:32:31,872 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 256
+2026-05-21 10:32:31,873 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 257
+2026-05-21 10:32:31,874 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG B 258
+2026-05-21 10:32:31,874 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 259
+2026-05-21 10:32:31,952 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PHE B 261
+2026-05-21 10:32:32,013 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 262
+2026-05-21 10:32:32,158 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR B 268
+2026-05-21 10:32:32,158 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 270
+2026-05-21 10:32:32,159 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 272
+2026-05-21 10:32:32,159 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 273
+2026-05-21 10:32:32,160 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 275
+2026-05-21 10:32:32,161 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 276
+2026-05-21 10:32:32,162 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 278
+2026-05-21 10:32:32,163 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 280
+2026-05-21 10:32:32,168 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ARG B 288
+2026-05-21 10:32:32,168 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump SER B 289
+2026-05-21 10:32:32,169 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 291
+2026-05-21 10:32:32,169 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 292
+2026-05-21 10:32:32,249 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 293
+2026-05-21 10:32:32,252 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 296
+2026-05-21 10:32:32,252 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 297
+2026-05-21 10:32:32,261 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 314
+2026-05-21 10:32:32,262 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump MET B 315
+2026-05-21 10:32:32,263 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 317
+2026-05-21 10:32:32,264 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 320
+2026-05-21 10:32:32,264 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR B 321
+2026-05-21 10:32:32,267 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 326
+2026-05-21 10:32:32,269 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR B 330
+2026-05-21 10:32:32,272 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 337
+2026-05-21 10:32:32,277 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 347
+2026-05-21 10:32:32,278 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ALA B 348
+2026-05-21 10:32:32,278 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 349
+2026-05-21 10:32:32,279 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 351
+2026-05-21 10:32:32,352 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump TYR B 352
+2026-05-21 10:32:32,353 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 354
+2026-05-21 10:32:32,353 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump HIS B 355
+2026-05-21 10:32:32,431 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ILE B 359
+2026-05-21 10:32:32,431 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 360
+2026-05-21 10:32:32,432 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 362
+2026-05-21 10:32:32,433 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LYS B 363
+2026-05-21 10:32:32,434 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump VAL B 364
+2026-05-21 10:32:32,434 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASN B 365
+2026-05-21 10:32:32,439 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PRO B 376
+2026-05-21 10:32:32,440 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump LEU B 377
+2026-05-21 10:32:32,449 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump ASP B 395
+2026-05-21 10:32:32,449 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump GLN B 396
+2026-05-21 10:32:32,454 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump THR B 406
+2026-05-21 10:32:32,457 WARNING:debump.py:179:debump_biomolecule:WARNING: Unable to debump PHE B 414
+2026-05-21 10:32:32,460 INFO:main.py:666:non_trivial:Optimizing hydrogen bonds
+2026-05-21 10:32:32,894 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,895 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,896 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,896 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,897 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,898 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,898 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,899 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,900 WARNING:debump.py:361:get_closest_atom:Skipped atom during water optimization: H1 in HOH A 650 skipped when optimizing H2 in HOH A 644
+2026-05-21 10:32:32,900 WARNING:io.py:44:filter:Suppressing further "Skipped atom during water optimization" messages
+2026-05-21 10:32:37,197 INFO:main.py:678:non_trivial:Applying force field to biomolecule states.
+2026-05-21 10:32:37,204 INFO:main.py:725:non_trivial:Regenerating headers.
+2026-05-21 10:32:37,206 INFO:main.py:750:non_trivial:Regenerating PDB lines.
+2026-05-21 10:32:37,248 WARNING:main.py:326:print_pqr:Ignoring 1287 header lines in output.
+2026-05-21 10:32:37,248 WARNING:main.py:330:print_pqr:Ignoring 16 missing lines in output.

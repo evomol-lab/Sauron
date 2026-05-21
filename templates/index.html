@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sauron RIN Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Mode">
+        <svg id="theme-icon-light" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg id="theme-icon-dark" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+    <div class="container glass-panel">
+        <header>
+            <div class="logo-container">
+                <img id="logo-img" src="{{ url_for('static', filename='sauron-rins-logo-inv.png') }}" alt="Sauron Logo" style="width: 300px; height: auto; max-width: 100%;">
+            </div>
+            <p class="subtitle">Residue Interaction Network Calculator</p>
+        </header>
+
+        <main>
+            <form id="upload-form">
+                <!-- File Upload Zone -->
+                <div class="upload-zone" id="drop-zone">
+                    <input type="file" id="file-input" name="file" accept=".pdb, .cif" hidden>
+                    <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p class="upload-text">Drag & drop your PDB or CIF file here</p>
+                    <p class="upload-subtext">or click to browse</p>
+                    <div class="file-name-display" id="file-name">No file selected</div>
+                </div>
+
+                <!-- Parameters -->
+                <div class="parameters">
+                    <h2>Calculation Parameters</h2>
+                    
+                    <label class="toggle-switch">
+                        <div class="toggle-info">
+                            <span class="toggle-title">Add Hydrogens</span>
+                            <span class="toggle-desc">Use pdb2pqr to explicitly add hydrogens to the structure</span>
+                        </div>
+                        <input type="checkbox" id="add_h" name="add_h">
+                        <span class="slider"></span>
+                    </label>
+
+                    <label class="toggle-switch">
+                        <div class="toggle-info">
+                            <span class="toggle-title">Strict Angle</span>
+                            <span class="toggle-desc">Enforce >120° geometry for explicit Hydrogen Bonds</span>
+                        </div>
+                        <input type="checkbox" id="strict_angle" name="strict_angle">
+                        <span class="slider"></span>
+                    </label>
+
+                    <label class="toggle-switch">
+                        <div class="toggle-info">
+                            <span class="toggle-title">Remove Multiples</span>
+                            <span class="toggle-desc">Prune redundant edges between residues (keeps shortest distance)</span>
+                        </div>
+                        <input type="checkbox" id="remove_multiples" name="remove_multiples">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="submit-btn" id="submit-btn" disabled>
+                    <span>Calculate Network</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+            </form>
+
+            <div id="error-message" class="error-message"></div>
+            
+            <div id="success-state" class="success-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <h3>Calculation Complete</h3>
+                <p>Your network topology has been mapped successfully.</p>
+                <a id="download-btn" class="download-btn" href="#">Download Results (.zip)</a>
+                <button id="reset-btn" class="reset-btn">Calculate Another</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

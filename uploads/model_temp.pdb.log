@@ -1,0 +1,21 @@
+2026-05-21 10:52:39,438 INFO:main.py:246:print_splash_screen:PDB2PQR v3.7.1: biomolecular structure conversion software.
+2026-05-21 10:52:39,438 INFO:main.py:248:print_splash_screen:Please cite:  Jurrus E, et al.  Improvements to the APBS biomolecular solvation software suite.  Protein Sci 27 112-128 (2018).
+2026-05-21 10:52:39,438 INFO:main.py:248:print_splash_screen:Please cite:  Dolinsky TJ, et al.  PDB2PQR: expanding and upgrading automated preparation of biomolecular structures for molecular simulations. Nucleic Acids Res 35 W522-W525 (2007).
+2026-05-21 10:52:39,438 INFO:main.py:770:main_driver:Checking and transforming input arguments.
+2026-05-21 10:52:39,438 INFO:main.py:774:main_driver:Loading topology files.
+2026-05-21 10:52:39,469 INFO:main.py:776:main_driver:Loading molecule: model_temp.pdb
+2026-05-21 10:52:39,476 INFO:main.py:781:main_driver:Setting up molecule.
+2026-05-21 10:52:39,484 INFO:main.py:423:setup_molecule:Created biomolecule object with 415 residues and 3045 atoms.
+2026-05-21 10:52:39,484 INFO:main.py:785:main_driver:Setting termini states for biomolecule chains.
+2026-05-21 10:52:39,489 INFO:main.py:616:non_trivial:Loading forcefield.
+2026-05-21 10:52:39,495 INFO:main.py:620:non_trivial:Loading hydrogen topology definitions.
+2026-05-21 10:52:39,497 INFO:main.py:474:is_repairable:This biomolecule is clean.  No repair needed.
+2026-05-21 10:52:39,497 INFO:main.py:635:non_trivial:Updating disulfide bridges.
+2026-05-21 10:52:39,497 INFO:main.py:638:non_trivial:Debumping biomolecule.
+2026-05-21 10:52:39,560 INFO:main.py:661:non_trivial:Adding hydrogens to biomolecule.
+2026-05-21 10:52:39,751 INFO:main.py:664:non_trivial:Debumping biomolecule (again).
+2026-05-21 10:52:39,995 INFO:main.py:666:non_trivial:Optimizing hydrogen bonds
+2026-05-21 10:52:40,380 INFO:main.py:678:non_trivial:Applying force field to biomolecule states.
+2026-05-21 10:52:40,383 INFO:main.py:725:non_trivial:Regenerating headers.
+2026-05-21 10:52:40,384 INFO:main.py:750:non_trivial:Regenerating PDB lines.
+2026-05-21 10:52:40,403 WARNING:main.py:326:print_pqr:Ignoring 390 header lines in output.
