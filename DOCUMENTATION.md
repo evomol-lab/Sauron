@@ -159,6 +159,19 @@ Sauron is built on the shoulders of the following exceptional open-source librar
 
 ---
 
+## Artificial Intelligence Disclosure
+The authors used generative AI technologies for code auditing and performance optimization (Gemini® and GitHub-CoPilot®). Throughout this process, the authors maintained full control over the tool's design and interpretation of its results; the AI acted solely as a technical and linguistic aid. All AI-generated content was reviewed and approved by the authors, who take full responsibility for the final tool.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ## Credits
 
-Developed by the EvoMol-lab Team, BioMe, UFRN.
+Developed by the [EvoMol-lab's Team](https://evomol-lab.imd.ufrn.br/) at [BioMe](https://bioinfo.imd.ufrn.br/), [UFRN](https://www.ufrn.br/).
+
+<div align="center">
+  <img src="EvoMol_v2.png" alt="EvoMol Logo" width="400">
+</div>
