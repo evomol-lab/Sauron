@@ -4,9 +4,9 @@
 
 # Sauron
 
-Sauron is a Residue Interaction Network (RIN) Calculator that identifies and maps non-covalent intra-molecular interactions in protein structures. It analyzes PDB and MMCIF files to calculate interactions such as hydrogen bonds, salt bridges, disulfide bonds, and van der Waals contacts, outputting node and edge files perfectly suited for network analysis. 
+Sauron is a Residue Interaction Network (RIN) Calculator that identifies and maps intra-molecular interactions in protein structures. It analyzes PDB and MMCIF files to calculate interactions such as hydrogen bonds, salt bridges, disulfide bonds, and van der Waals contacts, outputting node and edge files perfectly suited for network analysis. 
 
-Sauron is designed to align with and improve upon established standards (like RING 4.0), providing strict geometry controls and graph-based topological metrics.
+Sauron is designed to align with established standards, providing strict geometry controls and graph-based topological metrics.
 
 <div align="center">
   <img src="EvoMol-logo.png" alt="EvoMol Logo" width="100">
