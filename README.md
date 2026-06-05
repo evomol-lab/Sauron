@@ -121,6 +121,9 @@ For a given input `structure.pdb`, Sauron generates:
 
 If the file contains multiple models, Sauron will generate these outputs individually for each model (`structure_model_1.edges`, etc.).
 
+## Artificial Intelligence Disclosure
+The authors used generative AI technologies for code auditing and performance optimization (Gemini® and GitHub-CoPilot®). Throughout this process, the authors maintained full control over the tool's design and interpretation of its results; the AI acted solely as a technical and linguistic aid. All AI-generated content was reviewed and approved by the authors, who take full responsibility for the final tool.
+
 ## Citing Sauron
 
 If you use Sauron in your research, please cite the Sauron's GitHub repository. The preprint information is coming soon.
