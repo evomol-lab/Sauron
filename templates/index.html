@@ -6,6 +6,13 @@
     <title>Sauron RIN Calculator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PDBe Molstar -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-light.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-plugin.js"></script>
+    <!-- 3D Force Graph -->
+    <script src="https://unpkg.com/3d-force-graph"></script>
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
 </head>
 <body>
     <div class="background-orbs">
@@ -27,6 +34,17 @@
 
         <main>
             <form id="upload-form">
+                <div style="margin-bottom: 16px; display: flex; gap: 24px; justify-content: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid var(--panel-border);">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="input_mode" value="upload" checked onchange="window.toggleInputMode()">
+                        Upload File
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="input_mode" value="fetch" onchange="window.toggleInputMode()">
+                        Fetch Structure
+                    </label>
+                </div>
+                
                 <!-- File Upload Zone -->
                 <div class="upload-zone" id="drop-zone">
                     <input type="file" id="file-input" name="file" accept=".pdb, .cif" hidden>
@@ -38,6 +56,18 @@
                     <p class="upload-text">Drag & drop your PDB or CIF file here</p>
                     <p class="upload-subtext">or click to browse</p>
                     <div class="file-name-display" id="file-name">No file selected</div>
+                </div>
+                
+                <!-- Fetch Zone -->
+                <div class="upload-zone" id="fetch-zone" style="display: none; flex-direction: column; gap: 16px; min-height: 200px; justify-content: center;">
+                    <div style="font-weight: 500; font-size: 1.1rem; margin-bottom: 8px;">Fetch from Database</div>
+                    <div style="display: flex; gap: 12px; align-items: center; max-width: 400px; width: 100%; margin: 0 auto;">
+                        <select id="fetch_db" name="fetch_db" style="padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;">
+                            <option value="pdb">RCSB PDB</option>
+                            <option value="alphafold">AlphaFold DB</option>
+                        </select>
+                        <input type="text" id="fetch_id" name="fetch_id" placeholder="ID (e.g. 1AFW)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;" oninput="window.validateFetchInput()">
+                    </div>
                 </div>
 
                 <!-- Parameters -->
@@ -70,6 +100,24 @@
                         <input type="checkbox" id="remove_multiples" name="remove_multiples">
                         <span class="slider"></span>
                     </label>
+                    
+                    <div style="margin-top: 16px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
+                        <div class="toggle-info" style="margin-bottom: 8px;">
+                            <span class="toggle-title">Chain Selection</span>
+                            <span class="toggle-desc">Calculate RINs for all chains or specify chains</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="chains_opt" value="all" checked onchange="document.getElementById('chains_input').style.display='none'">
+                                All Chains
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="chains_opt" value="specific" onchange="document.getElementById('chains_input').style.display='block'">
+                                Specific Chains
+                            </label>
+                            <input type="text" id="chains_input" name="chains_input" placeholder="e.g. A,B,C" style="display: none; width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--text-color); margin-top: 4px; font-family: inherit;">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Submit Button -->
@@ -88,11 +136,203 @@
                 </svg>
                 <h3>Calculation Complete</h3>
                 <p>Your network topology has been mapped successfully.</p>
-                <a id="download-btn" class="download-btn" href="#">Download Results (.zip)</a>
-                <button id="reset-btn" class="reset-btn">Calculate Another</button>
+                <div class="success-actions">
+                    <a id="download-btn" class="download-btn" href="#">Download Results (.zip)</a>
+                    <button id="reset-btn" class="reset-btn">Calculate Another</button>
+                </div>
+                
+                <div class="visualization-panel">
+                    <div class="viewer-container">
+                        <div class="viewer-header">3D Structure</div>
+                        <div id="structure-viewer" class="viewer-canvas"></div>
+                    </div>
+                    <div class="viewer-container">
+                        <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <span>Interaction Graph</span>
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <div id="edge-legend" style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;"></div>
+                                <div style="width: 1px; height: 16px; background-color: var(--panel-border);"></div>
+                                <div id="color-legend" style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;"></div>
+                                <select id="node-color-select" style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
+                                    <option value="default">Default</option>
+                                    <option value="dssp">DSSP</option>
+                                    <option value="chemical">Chemical Feature</option>
+                                    <option value="chain">Chain</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="graph-viewer" class="viewer-canvas"></div>
+                    </div>
+                </div>
+                
+                <div id="sequence-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header">
+                        <span style="font-weight: 600;">Primary Sequence</span>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Select a residue to focus in the 3D viewers and view interactions</div>
+                        <div id="sequence-legend" style="display: flex; gap: 12px; font-size: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 12px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 6px;"></div>
+                    </div>
+                    <div id="sequence-content" style="padding: 16px; display: flex; flex-direction: column; gap: 16px; max-height: 250px; overflow-y: auto;">
+                        <!-- Sequence chains will be injected here -->
+                    </div>
+                </div>
+                
+                <div id="interaction-details-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                    <div class="viewer-header" id="interaction-header" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div id="interaction-title" style="font-weight: 600;">Node Interactions</div>
+                        <div id="node-metrics" style="font-size: 0.85rem; font-weight: normal; display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-muted);"></div>
+                    </div>
+                    <div class="table-container" style="padding: 16px; overflow-x: auto;">
+                        <table id="interaction-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--panel-border);">
+                                    <th style="padding: 8px;">Target Node</th>
+                                    <th style="padding: 8px;">Interaction Type</th>
+                                    <th style="padding: 8px;">Distance (Å)</th>
+                                    <th style="padding: 8px;">Angle (°)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="top-residues-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span style="font-weight: 600;">Top 10 Residues</span>
+                        <select id="top-feature-select" style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
+                            <option value="degree">Degree</option>
+                            <option value="betweenness">Betweenness Centrality</option>
+                            <option value="eigenvector">Eigenvector Centrality</option>
+                            <option value="clustering">Clustering Coefficient</option>
+                        </select>
+                    </div>
+                    <div class="table-container" style="padding: 16px; overflow-x: auto;">
+                        <table id="top-residues-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--panel-border);">
+                                    <th style="padding: 8px; width: 50%;">Residue</th>
+                                    <th style="padding: 8px; width: 50%;" id="top-feature-header">Degree</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="interchain-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span>Inter-chain Interactions</span>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Connections between residues of distinct chains</div>
+                    </div>
+                    <div style="overflow-y: auto; max-height: 300px; padding: 16px;">
+                        <table id="interchain-table" style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--panel-border); color: var(--text-muted);">
+                                    <th style="padding: 8px;">Node 1</th>
+                                    <th style="padding: 8px;">Node 2</th>
+                                    <th style="padding: 8px;">Interaction</th>
+                                    <th style="padding: 8px;">Distance</th>
+                                    <th style="padding: 8px;">Angle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Interchain rows will be dynamically injected here -->
+                            </tbody>
+                        </table>
+                        <div id="no-interchain-msg" style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                            No inter-chain interactions detected.
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="ligand-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span>Ligand Interactions</span>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Interactions involving non-standard residues (ligands)</div>
+                    </div>
+                    <div style="overflow-y: auto; max-height: 300px; padding: 16px;">
+                        <table id="ligand-table" style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--panel-border); color: var(--text-muted);">
+                                    <th style="padding: 8px;">Ligand Node</th>
+                                    <th style="padding: 8px;">Target Node</th>
+                                    <th style="padding: 8px;">Interaction</th>
+                                    <th style="padding: 8px;">Distance</th>
+                                    <th style="padding: 8px;">Angle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Ligand rows will be dynamically injected here -->
+                            </tbody>
+                        </table>
+                        <div id="no-ligand-msg" style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                            No ligand interactions detected.
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="complexity-analysis-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header">
+                        <span style="font-weight: 600;">Network Complexity Analysis</span>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Provides metrics for the calculated network to help assess its complexity.</div>
+                    </div>
+                    <div style="padding: 16px;">
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Nodes</div>
+                                <div id="metric-nodes" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Edges</div>
+                                <div id="metric-edges" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Density</div>
+                                <div id="metric-density" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg. Clustering</div>
+                                <div id="metric-clustering" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg. Shortest Path</div>
+                                <div id="metric-path" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 300px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="font-weight: 600;">Degree Distribution (Bar)</div>
+                                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
+                                        <input type="checkbox" id="log-bar-chk"> Log-Log
+                                    </label>
+                                </div>
+                                <div id="degree-bar-plot" style="width: 100%; height: 350px;"></div>
+                            </div>
+                            <div style="flex: 1; min-width: 300px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="font-weight: 600;">Degree Distribution (Scatter)</div>
+                                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
+                                        <input type="checkbox" id="log-scatter-chk"> Log-Log
+                                    </label>
+                                </div>
+                                <div id="degree-scatter-plot" style="width: 100%; height: 350px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
+    
+    <footer class="app-footer">
+        <a href="http://evomol-lab.imd.ufrn.br" target="_blank" rel="noopener noreferrer">
+            <img src="{{ url_for('static', filename='EvoMol-logo.png') }}" alt="EvoMol Lab Logo" class="footer-logo">
+        </a>
+        <p>developed by the Evomol-Lab Team, BioMe/UFRN</p>
+    </footer>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

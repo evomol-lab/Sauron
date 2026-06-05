@@ -1,2 +1,9 @@
 .venv/
 sauron/
+dist/
+uploads/
+node_modules/
+build/
+__pycache__/
+*.pyc
+.offline-markdown-preview/

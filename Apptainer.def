@@ -1,0 +1,32 @@
+Bootstrap: docker
+From: python:3.10-slim
+
+%help
+    Container for SauronGUI: Residue Interaction Network Calculator.
+    Usage:
+    apptainer run --bind /path/to/host/uploads:/opt/sauron/uploads sauron.sif
+
+%files
+    . /opt/sauron
+
+%post
+    # Install system dependencies
+    apt-get update && apt-get install -y dssp
+    rm -rf /var/lib/apt/lists/*
+
+    # Install Python dependencies
+    cd /opt/sauron
+    pip install --no-cache-dir -r requirements.txt
+
+    # Ensure uploads directory exists and is writable
+    mkdir -p /opt/sauron/uploads
+    chmod 777 /opt/sauron/uploads
+
+%environment
+    export LC_ALL=C
+    export FLASK_APP=SauronGUI.py
+    export SAURON_UPLOAD_DIR=/opt/sauron/uploads
+
+%runscript
+    cd /opt/sauron
+    exec python SauronGUI.py "$@"

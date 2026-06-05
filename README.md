@@ -9,20 +9,23 @@ Sauron is a Residue Interaction Network (RIN) Calculator that identifies and map
 Sauron is designed to align with and improve upon established standards (like RING 4.0), providing strict geometry controls and graph-based topological metrics.
 
 <div align="center">
-  <img src="EvoMol-logo.png" alt="Rictusempra Logo" width="100">
+  <img src="EvoMol-logo.png" alt="EvoMol Logo" width="100">
 </div>
 
-Developed by the [EvoMol-Lab](github.com/evomol-lab), [BioME](bioinfo.imd.ufrn.br), UFRN, Brazil.
+Developed by the EvoMol-lab Team, BioMe, UFRN.
 
 ## Features
 
 - **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, and VDW interactions.
-- **Topological Metrics**: Automatically computes network properties including Degree, Clustering Coefficient, Betweenness Centrality, and Eigenvector Centrality for every node.
+- **Topological Metrics**: Automatically computes network properties including Degree, Clustering Coefficient, Betweenness Centrality, and Eigenvector Centrality.
+- **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar).
+- **Direct Database Fetching**: Instantly calculate networks by providing an RCSB PDB ID or an AlphaFold UniProt ID.
 - **Rigorous Filters**: 
+  - Restrict calculations to specific chains.
   - Optionally enforce strict >120° angle constraints for Hydrogen Bonds.
-  - Remove multiple/redundant interactions of the same type between the same residue pair to prevent inflated network degrees.
+  - Remove multiple/redundant interactions of the same type between the same residue pair.
 - **Hydrogen Addition**: Built-in support to add missing hydrogens using `pdb2pqr`.
-- **Dual Interface**: Use Sauron either via a powerful Command-Line Interface (CLI) or a modern, user-friendly Web UI.
+- **Container Ready**: Easily deployable via Docker, Podman, and Apptainer/Singularity.
 
 ## Requirements
 
@@ -32,6 +35,7 @@ The core dependencies are listed in `requirements.txt`. Key packages include:
 - `pandas`
 - `numpy`
 - `Flask` (for the web interface)
+- `requests` (for fetching remote structures)
 - `pdb2pqr` (optional, for explicit hydrogen addition)
 - `pydssp` (optional, for secondary structure assignment)
 
@@ -39,6 +43,8 @@ To install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
+
+Alternatively, you can run Sauron within a container (see Documentation for Docker and Apptainer details).
 
 ## Usage
 
@@ -54,22 +60,55 @@ python sauron.py <input_file> [options]
 - `--add-h`: Add hydrogens using `pdb2pqr` before calculating interactions.
 - `--strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°).
 - `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.
+- `--chains`: Comma-separated list of chains to calculate (e.g., A,B,C).
 
 **Example:**
 ```bash
-python sauron.py 1AFW.pdb --add-h --strict-angle --remove-multiples
+python sauron.py 1AFW.pdb --add-h --strict-angle --remove-multiples --chains A
 ```
 
 ### 2. Web Interface
 
-Sauron includes a beautiful, interactive web interface for uploading files and downloading ZIP packages of the results.
+Sauron includes a beautiful, interactive web interface for uploading files, fetching from databases, and visualizing the 3D network.
 
 Start the Flask server:
 ```bash
 python SauronGUI.py
 ```
 Then, open your browser and navigate to `http://localhost:5000`. 
-Drag and drop your PDB or CIF file, toggle your desired parameters, and click "Calculate Network" to download your results.
+Drag and drop your PDB/CIF file or fetch directly from RCSB/AlphaFold, toggle your desired parameters, and click "Calculate Network" to visualize and download your results.
+
+For more detailed information, please see `DOCUMENTATION.md`.
+
+## Container Deployment
+
+Sauron can be easily deployed via containers, bypassing the need to install Python dependencies manually.
+
+### Docker / Podman
+Build and run the image using the provided `Dockerfile`:
+```bash
+docker build -t sauron-gui .
+docker run -p 5000:5000 -v $(pwd)/uploads:/opt/sauron/uploads sauron-gui
+```
+*(The `-v` flag mounts a local `uploads` directory so you can access the downloaded `.zip` output files easily.)*
+
+### Apptainer / Singularity
+Build and run the image using the provided `Apptainer.def` file (ideal for HPC environments):
+```bash
+apptainer build sauron.sif Apptainer.def
+
+export SAURON_UPLOAD_DIR=/tmp/sauron_uploads
+mkdir -p $SAURON_UPLOAD_DIR
+apptainer run --bind $SAURON_UPLOAD_DIR:/opt/sauron/uploads sauron.sif
+```
+
+## Google Colab Notebook
+
+You can also run Sauron in Google Colab without installing anything. Click the badge below to open the notebook in Google Colab and start using it immediately.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gNwkodDXqh3cRf-X7c34P6tslo89kbDF#scrollTo=Y4dnVbJFFH-f)
+
+>*Fetching the structures from databases and the visualization features are not available in the Colab notebook.*
 
 ## Output Files
 
@@ -82,6 +121,14 @@ For a given input `structure.pdb`, Sauron generates:
 
 If the file contains multiple models, Sauron will generate these outputs individually for each model (`structure_model_1.edges`, etc.).
 
+## Citing Sauron
+
+If you use Sauron in your research, please cite the Sauron's GitHub repository. The preprint information is coming soon.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 <div align="center">
-  <img src="EvoMol_v2.png" alt="Rictusempra Logo" width="400">
+  <img src="EvoMol_v2.png" alt="EvoMol Logo" width="400">
 </div>

@@ -77,7 +77,12 @@ def add_hydrogens(input_file):
     
     print(f"Adding hydrogens using pdb2pqr to {input_file}...")
     try:
-        subprocess.run(["pdb2pqr", "--ff=PARSE", "--keep-chain", input_file, output_file], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if getattr(sys, 'frozen', False):
+            cmd = [sys.executable, "--run-pdb2pqr", "--ff=PARSE", "--keep-chain", input_file, output_file]
+        else:
+            cmd = ["pdb2pqr", "--ff=PARSE", "--keep-chain", input_file, output_file]
+            
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return output_file
     except Exception as e:
         print(f"pdb2pqr failed or not available: {e}. Falling back to original file.")
@@ -404,6 +409,7 @@ def main():
     parser.add_argument("--add-h", action="store_true", help="Add hydrogens using pdb2pqr")
     parser.add_argument("--strict-angle", action="store_true", help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg)")
     parser.add_argument("--remove-multiples", action="store_true", help="Remove multiple interactions of the same type between the same residue pair")
+    parser.add_argument("--chains", type=str, help="Comma-separated list of chains to calculate (e.g. A,B,C)")
     args = parser.parse_args()
     
     input_file = args.input
@@ -443,6 +449,12 @@ def main():
         else:
             struct_to_calc = orig_model
             pqr_file = temp_pdb
+            
+        if args.chains:
+            valid_chains = [c.strip() for c in args.chains.split(',')]
+            for chain in list(struct_to_calc):
+                if chain.id not in valid_chains:
+                    struct_to_calc.detach_child(chain.id)
             
         edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num)
         nodes_df = build_nodes_df(nodes, edges_df, os.path.basename(args.input), structure=struct_to_calc, model_num=model_num)
