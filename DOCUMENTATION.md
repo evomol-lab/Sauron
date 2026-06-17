@@ -43,7 +43,11 @@ Sauron provides two main ways to input structural data:
 ### Calculation Parameters
 
 Before running the calculation, you can toggle several parameters:
-- **Add Hydrogens**: Automatically runs `pdb2pqr` to add missing hydrogens to the structure before computing interactions.
+- **Calculation Method**: 
+  - *Standard*: Employs static distance bounds and neighbor-search algorithms. Perfect for strict cutoff network designs.
+  - *Voronoi*: Calculates interaction networks via Voronoi Tessellation. This effectively overcomes distance thresholding by mapping 3D space directly between adjoining residues, ensuring dense and topological biological relevance.
+  - *ProDy InSty*: Discovers atomic-level chemical interactions (such as Pi-Stacking, Cation-Pi, and Hydrogen Bonds) with dynamic subtyping (e.g. `MC_MC`, `SC_MC`). Automatically enforces `RING` compatibility.
+- **Add Hydrogens**: Automatically runs `pdb2pqr` to add missing hydrogens to the structure before computing interactions. Explicitly modeling hydrogens is vital to maximizing the accuracy of ProDy's computations.
 - **Strict Angle**: Enforces a strict geometric constraint (>120°) for explicit Hydrogen Bonds.
 - **Remove Multiples**: Prunes redundant edges of the same type between two residues, preserving only the one with the shortest distance.
 - **Chain Selection**: Choose to compute the network for all chains in the structure, or specify a comma-separated list of chains (e.g., `A,B`).
@@ -75,7 +79,8 @@ python sauron.py <input_file> [options]
 ```
 
 ### Options:
-- `--add-h`: Add hydrogens using `pdb2pqr`.
+- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, or `insty`). Default is `standard`.
+- `--add-h`: Add explicit hydrogens using `pdb2pqr` prior to computations (Highly recommended when using `--calc-method insty`).
 - `--strict-angle`: Enforce strict >120° angle constraints for Hydrogen Bonds.
 - `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.
 - `--chains`: Comma-separated list of chains to calculate (e.g., A,B,C).
