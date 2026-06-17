@@ -74,14 +74,17 @@
                 <div class="parameters">
                     <h2>Calculation Parameters</h2>
                     
-                    <label class="toggle-switch">
-                        <div class="toggle-info">
-                            <span class="toggle-title">Add Hydrogens</span>
-                            <span class="toggle-desc">Use pdb2pqr to explicitly add hydrogens to the structure</span>
+                    <div style="margin-bottom: 16px;">
+                        <div class="toggle-info" style="margin-bottom: 8px;">
+                            <span class="toggle-title">Calculation Method</span>
+                            <span class="toggle-desc">Select the algorithm to define interactions. (Hydrogens are added automatically)</span>
                         </div>
-                        <input type="checkbox" id="add_h" name="add_h">
-                        <span class="slider"></span>
-                    </label>
+                        <select id="calc_method" name="calc_method" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 1rem; font-family: inherit; cursor: pointer; outline: none;">
+                            <option value="standard" style="background: #111111; color: #E0E0E0;">Standard (Distance cutoffs)</option>
+                            <option value="voronoi" style="background: #111111; color: #E0E0E0;">Voronoi Tessellation</option>
+                            <option value="insty" style="background: #111111; color: #E0E0E0;">ProDy InSty</option>
+                        </select>
+                    </div>
 
                     <label class="toggle-switch">
                         <div class="toggle-info">

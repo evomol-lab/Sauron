@@ -95,31 +95,130 @@ def parse_structure(filepath):
         parser = PDBParser(QUIET=True)
     return parser.get_structure('struct', filepath)
 
-def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1):
+def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1, calc_method="standard", pqr_file=None):
     edges = []
     nodes = set()
     
     atoms = list(structure.get_atoms())
-    ns = NeighborSearch(atoms)
     
-    # Get pairs within 6.5 A
-    pairs = ns.search_all(6.5)
-    
-    # Organize pairs by residues
+    if calc_method == "insty":
+        try:
+            import prody
+            import warnings
+            import re
+            warnings.filterwarnings('ignore')
+            prody_atoms = prody.parsePQR(pqr_file) if pqr_file and pqr_file.endswith('.pqr') else prody.parsePDB(pqr_file)
+            if not prody_atoms:
+                raise ValueError("ProDy failed to parse structure.")
+            res = prody.calcProteinInteractions(prody_atoms)
+            
+            def parse_prody_node(res_str, chid):
+                m = re.match(r'^(.*?)(\-?\d+)$', res_str)
+                if not m: return None, None, None
+                resname = m.group(1)
+                pos = m.group(2)
+                return f"{chid}:{pos}:_:{resname}", resname, pos
+
+            def add_edge(n1, n2, interaction, dist, angle, a1='', a2=''):
+                if n1 > n2: n1, n2 = n2, n1
+                edges.append({
+                    'NodeId1': n1, 'Interaction': interaction, 'NodeId2': n2,
+                    'Distance': f"{dist:.3f}", 'Angle': f"{angle:.3f}" if angle != 'nan' else 'nan', 
+                    'Atom1': a1, 'Atom2': a2, 'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                })
+            
+            mc_atoms = ['N', 'C', 'CA', 'O']
+
+            def get_prody_contact_type(a1_name, a2_name):
+                if a1_name in mc_atoms and a2_name in mc_atoms: return 'MC_MC'
+                elif a1_name in mc_atoms or a2_name in mc_atoms: return 'SC_MC'
+                else: return 'SC_SC'
+
+            if len(res) > 0 and res[0]:
+                for hb in res[0]:
+                    n1, _, _ = parse_prody_node(hb[0], hb[2])
+                    n2, _, _ = parse_prody_node(hb[3], hb[5])
+                    if n1 and n2:
+                        a1 = hb[1].split('_')[0] if hb[1] else ''
+                        a2 = hb[4].split('_')[0] if hb[4] else ''
+                        ctype = get_prody_contact_type(a1, a2)
+                        add_edge(n1, n2, f'HBOND:{ctype}', hb[6], hb[7], a1, a2)
+            if len(res) > 1 and res[1]:
+                for sb in res[1]:
+                    n1, _, _ = parse_prody_node(sb[0], sb[2])
+                    n2, _, _ = parse_prody_node(sb[3], sb[5])
+                    if n1 and n2:
+                        a1 = sb[1].split('_')[0] if sb[1] else ''
+                        a2 = sb[4].split('_')[0] if sb[4] else ''
+                        ctype = get_prody_contact_type(a1, a2)
+                        add_edge(n1, n2, f'IONIC:{ctype}', sb[6], 'nan', a1, a2)
+            if len(res) > 3 and res[3]:
+                for pi in res[3]:
+                    n1, _, _ = parse_prody_node(pi[0], pi[2])
+                    n2, _, _ = parse_prody_node(pi[3], pi[5])
+                    if n1 and n2:
+                        add_edge(n1, n2, 'PIPISTACK:SC_SC', pi[6], 'nan')
+            if len(res) > 4 and res[4]:
+                for pc in res[4]:
+                    n1, _, _ = parse_prody_node(pc[0], pc[2])
+                    n2, _, _ = parse_prody_node(pc[3], pc[5])
+                    if n1 and n2:
+                        add_edge(n1, n2, 'PICATION:SC_SC', pc[6], 'nan')
+            if len(res) > 5 and res[5]:
+                for hy in res[5]:
+                    n1, _, _ = parse_prody_node(hy[0], hy[2])
+                    n2, _, _ = parse_prody_node(hy[3], hy[5])
+                    if n1 and n2:
+                        add_edge(n1, n2, 'VDW:SC_SC', hy[6], 'nan')
+            if len(res) > 6 and res[6]:
+                for ss in res[6]:
+                    n1, _, _ = parse_prody_node(ss[0], ss[2])
+                    n2, _, _ = parse_prody_node(ss[3], ss[5])
+                    if n1 and n2:
+                        add_edge(n1, n2, 'SSBOND:SC_SC', ss[6], 'nan', 'SG', 'SG')
+            
+            for a in atoms:
+                if a.parent.id[0] != 'W':
+                    nodes.add(a.parent)
+                    
+
+        except Exception as e:
+            print(f"ProDy calculation failed: {e}. Falling back to standard method.")
+            calc_method = "standard"
+
+    pairs = []
+    if calc_method == "voronoi":
+        from scipy.spatial import Voronoi
+        filtered_atoms = [a for a in atoms if a.parent.id[0] != 'W']
+        coords = np.array([a.coord for a in filtered_atoms])
+        if len(coords) >= 4:
+            try:
+                vor = Voronoi(coords)
+                pairs_set = set()
+                for ridge in vor.ridge_points:
+                    pairs_set.add(tuple(sorted([ridge[0], ridge[1]])))
+                for i, j in pairs_set:
+                    a1, a2 = filtered_atoms[i], filtered_atoms[j]
+                    if np.linalg.norm(a1.coord - a2.coord) <= 6.5:
+                        pairs.append((a1, a2))
+            except:
+                calc_method = "standard"
+                
+    if calc_method == "standard":
+        ns = NeighborSearch(atoms)
+        pairs = ns.search_all(6.5)
+        
     res_pairs = {}
     for a1, a2 in pairs:
         r1, r2 = a1.parent, a2.parent
         if r1 == r2: continue
         
-        # Skip Water
         if r1.id[0] == 'W' or r2.id[0] == 'W': continue
         
-        # Avoid i to i+1 MC-MC contacts like peptide bonds
         if abs(r1.id[1] - r2.id[1]) <= 1 and r1.parent == r2.parent:
-            # allow SC-SC or MC-SC, but exclude N-C bonding
             if a1.name in ['N', 'C', 'CA', 'O'] and a2.name in ['N', 'C', 'CA', 'O']:
                 dist = np.linalg.norm(a1.coord - a2.coord)
-                if dist < 2.0: continue # Covalent bond
+                if dist < 2.0: continue
                 
         key = tuple(sorted([r1, r2], key=lambda x: format_node_id(x)))
         if key not in res_pairs:
@@ -270,6 +369,17 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
     cols = ['NodeId1', 'Interaction', 'NodeId2', 'Distance', 'Angle', 'Atom1', 'Atom2', 'Donor', 'Positive', 'Cation', 'Orientation', 'Model']
     if not edges_df.empty:
         edges_df = edges_df[cols]
+        def extract_sort_key(node_id):
+            parts = node_id.split(':')
+            if len(parts) >= 2:
+                chain = parts[0]
+                try:
+                    pos = int(parts[1])
+                except ValueError:
+                    pos = 0
+                return (chain, pos)
+            return (node_id, 0)
+            
         if remove_multiples:
             edges_df['Distance_val'] = edges_df['Distance'].astype(float)
             edges_df = edges_df.sort_values('Distance_val')
@@ -277,6 +387,11 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
             edges_df = edges_df.drop(columns=['Distance_val'])
         else:
             edges_df = edges_df.drop_duplicates()
+            
+        # Ensure consistent order by Chain and numeric Position
+        edges_df['sort_key'] = edges_df['NodeId1'].apply(extract_sort_key)
+        edges_df = edges_df.sort_values(by=['sort_key'])
+        edges_df = edges_df.drop(columns=['sort_key'])
         
     return edges_df, nodes
 
@@ -342,7 +457,10 @@ def build_nodes_df(nodes, edges_df, pdbFileName="", structure=None, model_num=1)
     df = pd.DataFrame(nodes_data)
     cols = ['NodeId', 'Chain', 'Position', 'Residue', 'Type', 'Dssp', 'Degree', 'Bfactor_CA', 'x', 'y', 'z', 'pdbFileName', 'Model']
     if not df.empty:
-        df = df[cols].sort_values(by=['Chain', 'Position'])
+        # Sort by Chain, then by numeric Position
+        df['Position_int'] = pd.to_numeric(df['Position'], errors='coerce').fillna(0).astype(int)
+        df = df.sort_values(by=['Chain', 'Position_int'])
+        df = df[cols]
     return df
 
 def analyze_network(edges_df, nodes_df, prefix):
@@ -409,6 +527,7 @@ def main():
     parser.add_argument("--add-h", action="store_true", help="Add hydrogens using pdb2pqr")
     parser.add_argument("--strict-angle", action="store_true", help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg)")
     parser.add_argument("--remove-multiples", action="store_true", help="Remove multiple interactions of the same type between the same residue pair")
+    parser.add_argument("--calc-method", type=str, default="standard", choices=["standard", "voronoi", "insty"], help="Calculation method for interactions")
     parser.add_argument("--chains", type=str, help="Comma-separated list of chains to calculate (e.g. A,B,C)")
     args = parser.parse_args()
     
@@ -456,7 +575,7 @@ def main():
                 if chain.id not in valid_chains:
                     struct_to_calc.detach_child(chain.id)
             
-        edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num)
+        edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num, calc_method=args.calc_method, pqr_file=pqr_file)
         nodes_df = build_nodes_df(nodes, edges_df, os.path.basename(args.input), structure=struct_to_calc, model_num=model_num)
         
         edges_out = f"{prefix}.edges"

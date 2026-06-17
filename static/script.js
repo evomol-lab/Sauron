@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('fetch_db', document.getElementById('fetch_db').value);
             formData.append('fetch_id', document.getElementById('fetch_id').value.trim());
         }
-        formData.append('add_h', document.getElementById('add_h').checked);
+        formData.append('calc_method', document.getElementById('calc_method').value);
         formData.append('strict_angle', document.getElementById('strict_angle').checked);
         formData.append('remove_multiples', document.getElementById('remove_multiples').checked);
         

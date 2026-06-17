@@ -57,7 +57,7 @@ def upload():
         except Exception as e:
             return jsonify({'error': f"Failed to fetch structure from {fetch_db.upper()}: {str(e)}"}), 400
 
-    add_h = request.form.get('add_h') == 'true'
+    calc_method = request.form.get('calc_method', 'standard')
     strict_angle = request.form.get('strict_angle') == 'true'
     remove_multiples = request.form.get('remove_multiples') == 'true'
     chains_opt = request.form.get('chains_opt') # 'all' or 'specific'
@@ -75,7 +75,8 @@ def upload():
     else:
         cmd = [sys.executable, os.path.abspath(__file__), "--run-sauron", filename]
 
-    if add_h: cmd.append('--add-h')
+    cmd.append('--add-h')
+    cmd.extend(['--calc-method', calc_method])
     if strict_angle: cmd.append('--strict-angle')
     if remove_multiples: cmd.append('--remove-multiples')
     if chains_opt == 'specific' and chains_input and chains_input.strip():
