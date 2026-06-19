@@ -1,0 +1,122 @@
+2026-06-18 13:49:47.451 INFO - output_path: rinpy_out
+2026-06-18 13:49:47.451 INFO - Extracting PDB IDs to be processed.  started at: Thu Jun 18 13:49:47 2026
+2026-06-18 13:49:47.451 INFO - input_path: rinpy_in
+2026-06-18 13:49:47.451 INFO - The 'rinpy_out/1ake' directory is created!
+2026-06-18 13:49:47.452 INFO - Extracting PDB IDs to be processed.  ended at: Thu Jun 18 13:49:47 2026
+2026-06-18 13:49:47.452 INFO - Extracting PDB IDs to be processed. Duration: 0.00 seconds
+2026-06-18 13:49:47.452 INFO - Processing PDB files: ['rinpy_out/1ake/1ake.pdb']
+2026-06-18 13:49:47.452 INFO - ****************************** 1AKE ******************************
+2026-06-18 13:49:47.452 INFO - Start time: 13:49:47
+2026-06-18 13:49:47.452 INFO - ****************************** RESIDUE NETWORK BUILDER STARTS ******************************
+2026-06-18 13:49:47.452 INFO - Residue Network Builder  started at: Thu Jun 18 13:49:47 2026
+2026-06-18 13:49:47.485 INFO - Cutoff: 4.5
+2026-06-18 13:49:47.485 INFO - CPU workers requested: 1
+2026-06-18 13:49:47.485 INFO - Removing hydrogen...
+2026-06-18 13:49:47.529 INFO - 1ake_pre.pdb has been saved to the disk!
+2026-06-18 13:49:47.809 INFO - Default atom name(s) for 1ake are [CA].
+2026-06-18 13:49:48.000 INFO - CALCULATE AFFINITY STARTs at Thu Jun 18 13:49:47 2026
+2026-06-18 13:49:48.075 INFO - CPU cores detected: 16 | CPU workers requested: 1
+2026-06-18 13:49:49.787 INFO - CALCULATE AFFINITY ENDs at Thu Jun 18 13:49:49 2026
+2026-06-18 13:49:49.787 INFO - Elapsed duration of CALCULATE AFFINITY for 1AKE is 1.79 seconds.
+2026-06-18 13:49:49.795 INFO - Residue Network Builder  ended at: Thu Jun 18 13:49:49 2026
+2026-06-18 13:49:49.795 INFO - Residue Network Builder Duration: 2.34 seconds
+2026-06-18 13:49:49.795 INFO - ****************************** RESIDUE NETWORK BUILDER ENDS ******************************
+2026-06-18 13:49:49.796 INFO - ****************************** CENTRALITY ANALYZER STARTS ******************************
+2026-06-18 13:49:49.796 INFO - Centrality Analyzer  started at: Thu Jun 18 13:49:49 2026
+2026-06-18 13:49:49.796 INFO - Number of amino acid: 428
+2026-06-18 13:49:49.796 INFO - Centrality Analyzer - Build Network  started at: Thu Jun 18 13:49:49 2026
+2026-06-18 13:49:51.197 INFO - Centrality Analyzer - Build Network  ended at: Thu Jun 18 13:49:51 2026
+2026-06-18 13:49:51.197 INFO - Centrality Analyzer - Build Network Duration: 1.40 seconds
+2026-06-18 13:49:51.197 INFO - calculate centrality scores | CPU cores detected: 16 | Input files: 3 | Workers used: 3
+2026-06-18 13:49:51.240 INFO - Centrality score calculation for Betweenness STARTS...
+2026-06-18 13:49:51.240 INFO - Centrality Analyzer - Calculate Centrality Scores  started at: Thu Jun 18 13:49:51 2026
+2026-06-18 13:49:51.259 INFO - Centrality score calculation for Closeness STARTS...
+2026-06-18 13:49:51.259 INFO - Centrality Analyzer - Calculate Centrality Scores  started at: Thu Jun 18 13:49:51 2026
+2026-06-18 13:49:51.276 INFO - Centrality score calculation for Degree STARTS...
+2026-06-18 13:49:51.276 INFO - Centrality Analyzer - Calculate Centrality Scores  started at: Thu Jun 18 13:49:51 2026
+2026-06-18 13:49:51.277 INFO - rinpy_out/1ake/1ake_centrality_degree.csv has been saved to the disk!
+2026-06-18 13:49:52.005 INFO - rinpy_out/1ake/1ake_centrality_closeness.csv has been saved to the disk!
+2026-06-18 13:49:52.498 INFO - rinpy_out/1ake/1ake_centrality_betweenness.csv has been saved to the disk!
+2026-06-18 13:49:53.634 INFO - Closeness scores have been saved to rinpy_out/1ake/1ake_closeness_scores.png.
+2026-06-18 13:49:53.949 INFO - Closeness scores has been saved to rinpy_out/1ake/1ake_closeness_scores_histogram.png.
+2026-06-18 13:49:53.949 INFO - Centrality Analyzer - Calculate Centrality Scores  ended at: Thu Jun 18 13:49:53 2026
+2026-06-18 13:49:53.950 INFO - Centrality Analyzer - Calculate Centrality Scores Duration: 2.69 seconds
+2026-06-18 13:49:53.950 INFO - Centrality score calculation for Closeness ENDS...
+2026-06-18 13:49:54.115 INFO - Betweenness scores have been saved to rinpy_out/1ake/1ake_betweenness_scores.png.
+2026-06-18 13:49:54.359 INFO - Degree scores have been saved to rinpy_out/1ake/1ake_degree_scores.png.
+2026-06-18 13:49:54.416 INFO - Betweenness scores has been saved to rinpy_out/1ake/1ake_betweenness_scores_histogram.png.
+2026-06-18 13:49:54.416 INFO - Centrality Analyzer - Calculate Centrality Scores  ended at: Thu Jun 18 13:49:54 2026
+2026-06-18 13:49:54.416 INFO - Centrality Analyzer - Calculate Centrality Scores Duration: 3.18 seconds
+2026-06-18 13:49:54.416 INFO - Centrality score calculation for Betweenness ENDS...
+2026-06-18 13:49:54.650 INFO - Degree scores has been saved to rinpy_out/1ake/1ake_degree_scores_histogram.png.
+2026-06-18 13:49:54.650 INFO - Centrality Analyzer - Calculate Centrality Scores  ended at: Thu Jun 18 13:49:54 2026
+2026-06-18 13:49:54.650 INFO - Centrality Analyzer - Calculate Centrality Scores Duration: 3.37 seconds
+2026-06-18 13:49:54.650 INFO - Centrality score calculation for Degree ENDS...
+2026-06-18 13:49:54.668 INFO - Centrality Analyzer  ended at: Thu Jun 18 13:49:54 2026
+2026-06-18 13:49:54.668 INFO - Centrality Analyzer Duration: 4.87 seconds
+2026-06-18 13:49:54.668 INFO - ****************************** CENTRALITY ANALYZER ENDS ******************************
+2026-06-18 13:49:54.668 INFO - ****************************** CENTRALITY PDB MAPPER STARTS ******************************
+2026-06-18 13:49:54.668 INFO - Centrality PDB Mapper  started at: Thu Jun 18 13:49:54 2026
+2026-06-18 13:49:54.682 INFO - Pdb Mapper Process  started at: Thu Jun 18 13:49:54 2026
+2026-06-18 13:49:54.682 INFO - Centrality PDB Mapper has been started...
+2026-06-18 13:49:54.686 INFO - Starting creation of rinpy_out/1ake/1ake_centrality_betweenness.pdb.
+2026-06-18 13:49:54.702 INFO - Finished creating rinpy_out/1ake/1ake_centrality_betweenness.pdb.
+2026-06-18 13:49:54.802 INFO - Starting creation of rinpy_out/1ake/1ake_centrality_closeness.pdb.
+2026-06-18 13:49:54.817 INFO - Finished creating rinpy_out/1ake/1ake_centrality_closeness.pdb.
+2026-06-18 13:49:54.942 INFO - Starting creation of rinpy_out/1ake/1ake_centrality_degree.pdb.
+2026-06-18 13:49:54.957 INFO - Finished creating rinpy_out/1ake/1ake_centrality_degree.pdb.
+2026-06-18 13:49:55.052 INFO - Centrality Hub analyses has been done...
+2026-06-18 13:49:55.052 INFO - Pdb Mapper Process  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.052 INFO - Pdb Mapper Process Duration: 0.37 seconds
+2026-06-18 13:49:55.052 INFO - Centrality PDB Mapper  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.052 INFO - Centrality PDB Mapper Duration: 0.38 seconds
+2026-06-18 13:49:55.052 INFO - ****************************** CENTRALITY PDB MAPPER ENDS ******************************
+2026-06-18 13:49:55.052 INFO - ****************************** QUANTILE ANALYZER STARTS ******************************
+2026-06-18 13:49:55.052 INFO - Quantile Analyzer  started at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.052 INFO - calculate quantiles | CPU cores detected: 16 | Input files: 3 | Workers used: 3
+2026-06-18 13:49:55.096 INFO - Given quantile percentage for betweenness - 1ake : 5
+2026-06-18 13:49:55.103 INFO - Calculated threshold value for betweenness - 1ake : 0.10181196499999981
+2026-06-18 13:49:55.107 INFO - Centrality Analyzer - Create PyMol Data  started at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.109 INFO - Given quantile percentage for closeness - 1ake : 10
+2026-06-18 13:49:55.110 INFO - PyMOL query string has been saved to rinpy_out/1ake/1ake_betweenness_pymol_queries.txt.
+2026-06-18 13:49:55.110 INFO - Centrality Analyzer - Create PyMol Data  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.110 INFO - Centrality Analyzer - Create PyMol Data Duration: 0.00 seconds
+2026-06-18 13:49:55.116 INFO - Calculated threshold value for closeness - 1ake : 0.21350156
+2026-06-18 13:49:55.119 INFO - Centrality Analyzer - Create PyMol Data  started at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.122 INFO - Given quantile percentage for degree - 1ake : 10
+2026-06-18 13:49:55.122 INFO - PyMOL query string has been saved to rinpy_out/1ake/1ake_closeness_pymol_queries.txt.
+2026-06-18 13:49:55.123 INFO - Centrality Analyzer - Create PyMol Data  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.123 INFO - Centrality Analyzer - Create PyMol Data Duration: 0.00 seconds
+2026-06-18 13:49:55.129 INFO - Calculated threshold value for degree - 1ake : 12.0
+2026-06-18 13:49:55.132 INFO - Centrality Analyzer - Create PyMol Data  started at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.135 INFO - PyMOL query string has been saved to rinpy_out/1ake/1ake_degree_pymol_queries.txt.
+2026-06-18 13:49:55.136 INFO - Centrality Analyzer - Create PyMol Data  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.136 INFO - Centrality Analyzer - Create PyMol Data Duration: 0.00 seconds
+2026-06-18 13:49:55.145 INFO - Quantile Analyzer  ended at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.145 INFO - Quantile Analyzer Duration: 0.09 seconds
+2026-06-18 13:49:55.145 INFO - ****************************** QUANTILE ANALYZER ENDS ******************************
+2026-06-18 13:49:55.145 INFO - ****************************** HINGE RESIDUES ANALYZER STARTS ******************************
+2026-06-18 13:49:55.145 INFO - Hinge Residues Analyzer  started at: Thu Jun 18 13:49:55 2026
+2026-06-18 13:49:55.146 INFO - The 'rinpy_out/1ake/hinge_modes' directory is created!
+2026-06-18 13:49:55.160 INFO - Plotting Fiedler vector STARTS...
+2026-06-18 13:49:55.505 INFO - Saving Fiedler vector to: /home/jpmslima/coding/Sauron/rinpy_out/1ake/1ake_fiedler_vector.png
+2026-06-18 13:49:55.505 INFO - Plotting Fiedler vector ENDS...
+2026-06-18 13:49:55.505 INFO - plot_fiedler:  is 0.35 seconds.
+2026-06-18 13:49:55.749 INFO - Interactive plot saved to: rinpy_out/1ake/hinge_modes/1ake_laplacian_mode_1_hinge_interactive_clusters_3d.html
+2026-06-18 13:49:58.549 INFO - plot_graph_clusters_2d:  is 2.80 seconds.
+2026-06-18 13:49:58.767 INFO - Interactive plot saved to: rinpy_out/1ake/hinge_modes/1ake_laplacian_mode_2_hinge_interactive_clusters_3d.html
+2026-06-18 13:50:01.743 INFO - plot_graph_clusters_2d:  is 2.98 seconds.
+2026-06-18 13:50:01.948 INFO - Interactive plot saved to: rinpy_out/1ake/hinge_modes/1ake_laplacian_mode_3_hinge_interactive_clusters_3d.html
+2026-06-18 13:50:05.013 INFO - plot_graph_clusters_2d:  is 3.06 seconds.
+2026-06-18 13:50:05.222 INFO - Interactive plot saved to: rinpy_out/1ake/hinge_modes/1ake_laplacian_mode_4_hinge_interactive_clusters_3d.html
+2026-06-18 13:50:08.234 INFO - plot_graph_clusters_2d:  is 3.01 seconds.
+2026-06-18 13:50:08.234 INFO - Hinge Residues Analyzer  ended at: Thu Jun 18 13:50:08 2026
+2026-06-18 13:50:08.234 INFO - Hinge Residues Analyzer Duration: 13.09 seconds
+2026-06-18 13:50:08.234 INFO - ****************************** HINGE RESIDUES ANALYZER ENDS ******************************
+2026-06-18 13:50:08.234 INFO - End time: 13:50:08
+2026-06-18 13:50:08.234 INFO - Elapsed duration for 1AKE is 21.0 seconds
+2026-06-18 13:50:08.234 INFO - ****************************** 1AKE ******************************
+2026-06-18 13:50:08.234 INFO - ****************************** PROCESS SUMMARY STARTS ******************************
+2026-06-18 13:50:08.234 INFO - PDB processing summary: 1 out of 1 PDB structures were successfully processed; 0 structures were skipped because edge weights could not be constructed.
+2026-06-18 13:50:08.234 INFO - Total PDBs: 1, Total amino acids: 428
+2026-06-18 13:50:08.235 INFO - Total elapsed duration is 21.0 seconds (0h 0m 21s).
