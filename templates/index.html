@@ -83,26 +83,64 @@
                             <option value="standard" style="background: #111111; color: #E0E0E0;">Standard (Distance cutoffs)</option>
                             <option value="voronoi" style="background: #111111; color: #E0E0E0;">Voronoi Tessellation</option>
                             <option value="insty" style="background: #111111; color: #E0E0E0;">ProDy InSty</option>
+                            <option value="rinpy" style="background: #111111; color: #E0E0E0;">RinPy (Elastic Network Model)</option>
                         </select>
                     </div>
 
-                    <label class="toggle-switch">
+                    <!-- strict_angle and remove_multiples are now enforced by default on the backend -->
+
+                    <label class="toggle-switch" id="pen-container">
                         <div class="toggle-info">
-                            <span class="toggle-title">Strict Angle</span>
-                            <span class="toggle-desc">Enforce >120° geometry for explicit Hydrogen Bonds</span>
+                            <span class="toggle-title">Protein Energy Network (PEN)</span>
+                            <span class="toggle-desc">Calculate interaction energies (Electrostatics). Requires computing partial charges (PDB2PQR).</span>
                         </div>
-                        <input type="checkbox" id="strict_angle" name="strict_angle">
+                        <input type="checkbox" id="calc_energy" name="calc_energy">
                         <span class="slider"></span>
                     </label>
 
-                    <label class="toggle-switch">
+                    <label class="toggle-switch" id="vdw-container" style="display: none; margin-top: 10px; margin-left: 20px; border-left: 2px solid var(--panel-border); padding-left: 10px;">
                         <div class="toggle-info">
-                            <span class="toggle-title">Remove Multiples</span>
-                            <span class="toggle-desc">Prune redundant edges between residues (keeps shortest distance)</span>
+                            <span class="toggle-title">Include van der Waals</span>
+                            <span class="toggle-desc">Add generic Lennard-Jones terms to the total energy. If disabled, only Electrostatics is computed.</span>
                         </div>
-                        <input type="checkbox" id="remove_multiples" name="remove_multiples">
+                        <input type="checkbox" id="vdw_energy" name="vdw_energy">
                         <span class="slider"></span>
                     </label>
+                    <script>
+                        const calcEnergyToggle = document.getElementById('calc_energy');
+                        const vdwToggle = document.getElementById('vdw_energy');
+                        
+                        calcEnergyToggle.addEventListener('change', function() {
+                            document.getElementById('vdw-container').style.display = this.checked ? 'flex' : 'none';
+                        });
+
+                        const penContainer = document.getElementById('pen-container');
+                        const vdwContainer = document.getElementById('vdw-container');
+                        
+                        calcEnergyToggle.addEventListener('change', (e) => {
+                            if (e.target.checked) {
+                                vdwContainer.style.display = 'flex';
+                            } else {
+                                vdwContainer.style.display = 'none';
+                                vdwToggle.checked = false;
+                            }
+                        });
+                        
+                        const calcMethodSelect = document.getElementById('calc_method');
+                        calcMethodSelect.addEventListener('change', (e) => {
+                            if (e.target.value === 'rinpy') {
+                                penContainer.style.display = 'none';
+                                vdwContainer.style.display = 'none';
+                                calcEnergyToggle.checked = false;
+                                vdwToggle.checked = false;
+                            } else {
+                                penContainer.style.display = 'flex';
+                                if (calcEnergyToggle.checked) {
+                                    vdwContainer.style.display = 'flex';
+                                }
+                            }
+                        });
+                    </script>
                     
                     <div style="margin-top: 16px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
                         <div class="toggle-info" style="margin-bottom: 8px;">
@@ -223,6 +261,17 @@
                         </table>
                     </div>
                 </div>
+
+                <div id="rinpy-results-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                    <div class="viewer-header">
+                        <span style="font-weight: 600;">RinPy Results</span>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Top centrality metrics and hinge residues detected by Elastic Network Model. <span style="color: #ff6b6b; font-weight: 600;">Hinge residues</span> are defined as the mechanical joints of the protein, behaving as centers of low mobility that connect relatively rigid regions, being critical for orchestrating large-scale conformational changes.</div>
+                    </div>
+                    <div style="padding: 16px;">
+                        <div class="metrics-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; overflow-x: auto;"></div>
+                        <div class="metrics-content"></div>
+                    </div>
+                </div>
                 
                 <div id="interchain-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
                     <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -302,6 +351,10 @@
                             <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
                                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg. Shortest Path</div>
                                 <div id="metric-path" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Network Type</div>
+                                <div id="metric-class" style="font-size: 1.2rem; font-weight: 600; color: var(--accent-color);">Calculating...</div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 24px; flex-wrap: wrap;">

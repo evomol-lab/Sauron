@@ -4,7 +4,7 @@ import glob
 import zipfile
 import subprocess
 import requests
-from flask import Flask, request, render_template, send_file, jsonify
+from flask import Flask, request, render_template, send_file, jsonify, send_from_directory
 
 if getattr(sys, 'frozen', False):
     template_folder = os.path.join(sys._MEIPASS, 'templates')
@@ -58,16 +58,22 @@ def upload():
             return jsonify({'error': f"Failed to fetch structure from {fetch_db.upper()}: {str(e)}"}), 400
 
     calc_method = request.form.get('calc_method', 'standard')
-    strict_angle = request.form.get('strict_angle') == 'true'
-    remove_multiples = request.form.get('remove_multiples') == 'true'
+    strict_angle = True
+    remove_multiples = True
     chains_opt = request.form.get('chains_opt') # 'all' or 'specific'
     chains_input = request.form.get('chains_input')
+    calc_energy = request.form.get('calc_energy') == 'true'
+    vdw_energy = request.form.get('vdw_energy') == 'true'
     
     # Clear previous output files in UPLOAD_FOLDER
-    for ext in ["*.edges", "*.nodes", "*.tsv", "*.zip"]:
+    for ext in ["*.edges", "*.nodes", "*.tsv", "*.zip", "*.log", "*_degree.pdb"]:
         for f in glob.glob(os.path.join(UPLOAD_FOLDER, ext)):
             try: os.remove(f)
             except: pass
+    import shutil
+    for d in glob.glob(os.path.join(UPLOAD_FOLDER, "*_rinpy_out")):
+        try: shutil.rmtree(d)
+        except: pass
     
     # Build command for sauron.py processing
     if getattr(sys, 'frozen', False):
@@ -75,10 +81,13 @@ def upload():
     else:
         cmd = [sys.executable, os.path.abspath(__file__), "--run-sauron", filename]
 
-    cmd.append('--add-h')
+    if calc_energy or calc_method == 'insty':
+        cmd.append('--add-h')
     cmd.extend(['--calc-method', calc_method])
     if strict_angle: cmd.append('--strict-angle')
     if remove_multiples: cmd.append('--remove-multiples')
+    if calc_energy: cmd.append('--energy')
+    if vdw_energy: cmd.append('--vdw-energy')
     if chains_opt == 'specific' and chains_input and chains_input.strip():
         cmd.extend(['--chains', chains_input.strip().upper()])
     
@@ -95,29 +104,66 @@ def upload():
     
     out_files = glob.glob(os.path.join(UPLOAD_FOLDER, "*.edges")) + \
                 glob.glob(os.path.join(UPLOAD_FOLDER, "*.nodes")) + \
-                glob.glob(os.path.join(UPLOAD_FOLDER, "*.tsv"))
+                glob.glob(os.path.join(UPLOAD_FOLDER, "*.tsv")) + \
+                glob.glob(os.path.join(UPLOAD_FOLDER, "*.log")) + \
+                glob.glob(os.path.join(UPLOAD_FOLDER, "*_degree.pdb"))
                 
-    if not out_files:
-        return jsonify({'error': 'No output files were generated.'}), 500
-        
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for f in out_files:
-            zipf.write(f, os.path.basename(f))
-            
+    prefix = os.path.splitext(filename)[0]
+    rinpy_out_dir = os.path.join(UPLOAD_FOLDER, f"{prefix}_rinpy_out")
+    
+    is_rinpy = calc_method == 'rinpy'
+    rinpy_html = None
+    rinpy_summary_data = None
+    
+    summary_path = os.path.join(UPLOAD_FOLDER, f"{prefix}_rinpy_summary.json")
+    if os.path.exists(summary_path):
+        import json
+        with open(summary_path, 'r') as f:
+            rinpy_summary_data = json.load(f)
+
+    
+    if is_rinpy:
+        if not os.path.exists(rinpy_out_dir):
+            return jsonify({'error': 'RinPy output directory not found.'}), 500
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(rinpy_out_dir):
+                for f in files:
+                    file_path = os.path.join(root, f)
+                    arcname = os.path.relpath(file_path, rinpy_out_dir)
+                    zipf.write(file_path, arcname)
+                    if f.endswith("interactive_clusters_3d.html") and rinpy_html is None:
+                        # Find the first HTML plot to show in GUI
+                        rinpy_html = arcname
+            # also add the log file
+            log_files = glob.glob(os.path.join(UPLOAD_FOLDER, "*.log"))
+            for lf in log_files:
+                zipf.write(lf, os.path.basename(lf))
+            # add json
+            if os.path.exists(summary_path):
+                zipf.write(summary_path, os.path.basename(summary_path))
+
+    else:
+        if not out_files:
+            return jsonify({'error': 'No output files were generated.'}), 500
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for f in out_files:
+                zipf.write(f, os.path.basename(f))
+                
     # Identify model network files if they exist
     edges_file = None
     nodes_file = None
     metrics_file = None
-    for f in out_files:
-        basename = os.path.basename(f)
-        if basename.endswith(".edges") and (edges_file is None or "model_1." in basename):
-            edges_file = basename
-        if basename.endswith(".nodes") and (nodes_file is None or "model_1." in basename):
-            nodes_file = basename
-        if basename.endswith("network_metrics.tsv") and (metrics_file is None or "model_1_" in basename):
-            metrics_file = basename
+    if not is_rinpy:
+        for f in out_files:
+            basename = os.path.basename(f)
+            if basename.endswith(".edges") and (edges_file is None or "model_1." in basename):
+                edges_file = basename
+            if basename.endswith(".nodes") and (nodes_file is None or "model_1." in basename):
+                nodes_file = basename
+            if basename.endswith("network_metrics.tsv") and (metrics_file is None or "model_1_" in basename):
+                metrics_file = basename
             
-    is_multimodel = any("model_2" in f for f in out_files)
+    is_multimodel = not is_rinpy and any("model_2" in f for f in out_files)
     
     return jsonify({
         'downloadUrl': f'/download/{zip_name}',
@@ -125,7 +171,11 @@ def upload():
         'edgesFile': edges_file,
         'nodesFile': nodes_file,
         'metricsFile': metrics_file,
-        'isMultimodel': is_multimodel
+        'isMultimodel': is_multimodel,
+        'isRinpy': is_rinpy,
+        'rinpyHtml': rinpy_html,
+        'rinpyPrefix': prefix,
+        'rinpySummary': rinpy_summary_data
     })
 
 @app.route('/download/<filename>')
@@ -141,6 +191,12 @@ def view_file(filename):
     if os.path.exists(path):
         return send_file(path)
     return "File not found", 404
+
+
+@app.route('/rinpy_view/<prefix>/<path:filepath>')
+def rinpy_view(prefix, filepath):
+    rinpy_dir = os.path.join(UPLOAD_FOLDER, f"{prefix}_rinpy_out")
+    return send_from_directory(rinpy_dir, filepath)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -163,3 +219,4 @@ if __name__ == '__main__':
         threading.Timer(1.25, open_browser).start()
         
     app.run(host='0.0.0.0', port=5000, debug=not getattr(sys, 'frozen', False))
+

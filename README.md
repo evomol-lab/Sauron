@@ -18,12 +18,13 @@ Developed by the EvoMol-lab Team, BioMe, UFRN.
 
 - **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, and VDW interactions.
 - **Topological Metrics**: Automatically computes network properties including Degree, Clustering Coefficient, Betweenness Centrality, and Eigenvector Centrality.
-- **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar).
+- **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar). The structural viewer dynamically adapts its background to the UI's Light/Dark mode.
 - **Direct Database Fetching**: Instantly calculate networks by providing an RCSB PDB ID or an AlphaFold UniProt ID.
 - **Versatile Calculation Methods**: 
   - *Standard*: A fast and strictly constrained distance/angle algorithm.
   - *Voronoi*: Applies Voronoi Tessellation to compute topological neighbor interactions with high sensitivity, circumventing reliance on fixed cutoffs.
   - *ProDy InSty*: A robust atomic-level interaction detector that captures complex interactions (like Pi-Stacking and Cation-Pi) while dynamically subtyping bonds (e.g. `MC_MC`, `SC_MC`, `SC_SC`).
+  - *RinPy*: Applies an Elastic Network Model to detect critical hinge residues and overall residue centrality, generating specialized CSV reports.
 - **Rigorous Filters**: 
   - Restrict calculations to specific chains.
   - Optionally enforce strict >120° angle constraints for Hydrogen Bonds.
@@ -43,6 +44,7 @@ The core dependencies are listed in `requirements.txt`. Key packages include:
 - `requests` (for fetching remote structures)
 - `pdb2pqr` (optional, for explicit hydrogen addition)
 - `pydssp` (optional, for secondary structure assignment)
+- `rinpy` (optional, for Elastic Network Model and hinge calculation)
 
 To install dependencies:
 ```bash
@@ -62,7 +64,7 @@ python sauron.py <input_file> [options]
 ```
 
 **Options:**
-- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, or `insty`). Default is `standard`.
+- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, `insty`, or `rinpy`). Default is `standard`.
 - `--add-h`: Add explicit hydrogens using `pdb2pqr` prior to calculations (Highly recommended for `insty` runs).
 - `--strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°).
 - `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.

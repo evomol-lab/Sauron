@@ -25,6 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
             themeIconLight.style.display = 'none';
             themeIconDark.style.display = 'block';
         }
+        
+        if (window.molstarViewer) {
+            const isLight = document.body.classList.contains('light-mode');
+            const bgColor = isLight ? {r: 255, g: 255, b: 255} : {r: 0, g: 0, b: 0};
+            try {
+                window.molstarViewer.plugin.canvas3d.setProps({ renderer: { backgroundColor: isLight ? 0xffffff : 0x000000 } });
+            } catch (e) {
+                // Fallback for some pdbe-molstar versions
+                window.molstarViewer.visual.update({ bgColor: bgColor });
+            }
+        }
     });
 
     const dropZone = document.getElementById('drop-zone');
@@ -137,8 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('fetch_id', document.getElementById('fetch_id').value.trim());
         }
         formData.append('calc_method', document.getElementById('calc_method').value);
-        formData.append('strict_angle', document.getElementById('strict_angle').checked);
-        formData.append('remove_multiples', document.getElementById('remove_multiples').checked);
+        formData.append('calc_energy', document.getElementById('calc_energy').checked);
+        formData.append('vdw_energy', document.getElementById('vdw_energy').checked);
         
         const chainsOpt = document.querySelector('input[name="chains_opt"]:checked').value;
         formData.append('chains_opt', chainsOpt);
@@ -186,6 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sequence-container').style.display = 'none';
         document.getElementById('sequence-content').innerHTML = '';
         document.getElementById('top-residues-container').style.display = 'none';
+        document.getElementById('rinpy-results-container').style.display = 'none';
+        const tabsDiv = document.querySelector('.metrics-tabs');
+        const contentDiv = document.querySelector('.metrics-content');
+        if (tabsDiv) tabsDiv.innerHTML = '';
+        if (contentDiv) contentDiv.innerHTML = '';
         document.getElementById('interchain-container').style.display = 'none';
         document.getElementById('ligand-container').style.display = 'none';
         document.getElementById('complexity-analysis-container').style.display = 'none';
@@ -235,6 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             structViewerDiv.innerHTML = '';
             
+            const isLightMode = document.body.classList.contains('light-mode');
+            const bgColor = isLightMode ? {r: 255, g: 255, b: 255} : {r: 0, g: 0, b: 0};
+            
             // Options for PDBe Molstar
             const options = {
                 customData: {
@@ -242,13 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     format: data.pdbFile.endsWith('.cif') ? 'cif' : 'pdb'
                 },
                 hideControls: true,
-                bgColor: {r: 0, g: 0, b: 0},
+                bgColor: bgColor,
                 lighting: 'plastic',
                 visualStyle: 'cartoon'
             };
             
-            molstarViewer = new PDBeMolstarPlugin();
-            molstarViewer.render(structViewerDiv, options);
+            window.molstarViewer = new PDBeMolstarPlugin();
+            window.molstarViewer.render(structViewerDiv, options);
+            molstarViewer = window.molstarViewer; // local reference for backward compatibility
             
         } catch (e) {
             console.error("Failed to load structure", e);
@@ -256,7 +276,105 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Load Graph
-        if (data.edgesFile && data.nodesFile) {
+        if (data.isRinpy) {
+            graphViewerDiv.innerHTML = '';
+            document.getElementById('interaction-details-container').style.display = 'none';
+            document.getElementById('sequence-container').style.display = 'none';
+            document.getElementById('top-residues-container').style.display = 'none';
+            document.getElementById('rinpy-results-container').style.display = 'none';
+            document.getElementById('interchain-container').style.display = 'none';
+            document.getElementById('ligand-container').style.display = 'none';
+            document.getElementById('complexity-analysis-container').style.display = 'none';
+            
+            if (data.rinpyHtml) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `/rinpy_view/${data.rinpyPrefix}/${data.rinpyHtml}`;
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                iframe.style.borderRadius = '8px';
+                graphViewerDiv.appendChild(iframe);
+            } else {
+                graphViewerDiv.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--text-muted);text-align:center;">RinPy calculation completed.<br><br>Download the ZIP file to view the full CSV reports and interactive plots.</div>';
+            }
+            
+            // Render RinPy Tables
+            if (data.rinpySummary) {
+                document.getElementById('rinpy-results-container').style.display = 'block';
+                document.getElementById('top-residues-container').style.display = 'none';
+                document.getElementById('interaction-details-container').style.display = 'none'; // Keep standard network details hidden
+                
+                const tabsDiv = document.querySelector('.metrics-tabs');
+                const contentDiv = document.querySelector('.metrics-content');
+                tabsDiv.innerHTML = '';
+                contentDiv.innerHTML = '';
+                
+                // Add Degree, Betweenness, Closeness
+                const metrics = [
+                    {key: 'degree', label: 'Top Degree'},
+                    {key: 'betweenness', label: 'Top Betweenness'},
+                    {key: 'closeness', label: 'Top Closeness'}
+                ];
+                
+                let isFirstTab = true;
+                
+                metrics.forEach(m => {
+                    if (data.rinpySummary[m.key] && data.rinpySummary[m.key].length > 0) {
+                        const tabBtn = document.createElement('button');
+                        tabBtn.className = `metric-tab ${isFirstTab ? 'active' : ''}`;
+                        tabBtn.textContent = m.label;
+                        tabBtn.onclick = (e) => {
+                            document.querySelectorAll('.metric-tab').forEach(b => b.classList.remove('active'));
+                            e.target.classList.add('active');
+                            document.querySelectorAll('.metric-pane').forEach(p => p.classList.remove('active'));
+                            document.getElementById(`pane-${m.key}`).classList.add('active');
+                        };
+                        tabsDiv.appendChild(tabBtn);
+                        
+                        const pane = document.createElement('div');
+                        pane.className = `metric-pane ${isFirstTab ? 'active' : ''}`;
+                        pane.id = `pane-${m.key}`;
+                        
+                        let tableHtml = '<table class="data-table"><thead><tr><th>Rank</th><th>Residue</th><th>Score</th></tr></thead><tbody>';
+                        data.rinpySummary[m.key].forEach((item, index) => {
+                            tableHtml += `<tr><td>${index+1}</td><td>${item.Residue}</td><td>${item.Value.toFixed(4)}</td></tr>`;
+                        });
+                        tableHtml += '</tbody></table>';
+                        pane.innerHTML = tableHtml;
+                        contentDiv.appendChild(pane);
+                        
+                        isFirstTab = false;
+                    }
+                });
+                
+                // Add Hinges
+                if (data.rinpySummary.hinges && Object.keys(data.rinpySummary.hinges).length > 0) {
+                    const tabBtn = document.createElement('button');
+                    tabBtn.className = `metric-tab`;
+                    tabBtn.textContent = 'Hinges (Modos Laplacianos)';
+                    tabBtn.style.color = '#ff6b6b';
+                    tabBtn.onclick = (e) => {
+                        document.querySelectorAll('.metric-tab').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        document.querySelectorAll('.metric-pane').forEach(p => p.classList.remove('active'));
+                        document.getElementById('pane-hinges').classList.add('active');
+                    };
+                    tabsDiv.appendChild(tabBtn);
+                    
+                    const pane = document.createElement('div');
+                    pane.className = `metric-pane`;
+                    pane.id = `pane-hinges`;
+                    
+                    let tableHtml = '<table class="data-table"><thead><tr><th>Mode</th><th>Hinge Residues</th></tr></thead><tbody>';
+                    for (const [mode, residues] of Object.entries(data.rinpySummary.hinges)) {
+                        tableHtml += `<tr><td style="font-weight:bold;color:#ff6b6b;">${mode.replace(/_/g, ' ').toUpperCase()}</td><td>${residues.join(', ')}</td></tr>`;
+                    }
+                    tableHtml += '</tbody></table>';
+                    pane.innerHTML = tableHtml;
+                    contentDiv.appendChild(pane);
+                }
+            }
+        } else if (data.edgesFile && data.nodesFile) {
             try {
                 const requests = [
                     fetch(`/view/${data.edgesFile}`),
@@ -1061,6 +1179,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('metric-density').textContent = density.toFixed(4);
         document.getElementById('metric-clustering').textContent = avgClustering.toFixed(4);
         document.getElementById('metric-path').textContent = isLcc && avgShortestPath !== "N/A" ? `${avgShortestPath} (LCC)` : avgShortestPath;
+        
+        // Simple heuristic for small-world / complex networks
+        // Protein RINs are typically small-world (high clustering compared to a random graph of same density)
+        let networkClass = "Random (Non-Complex)";
+        if (numNodes > 10 && avgClustering > (2 * density)) {
+            networkClass = "Small-World (Complex)";
+        }
+        document.getElementById('metric-class').textContent = networkClass;
         
         const degrees = nodes.map(n => n.degree || 1);
         const degreeCounts = {};

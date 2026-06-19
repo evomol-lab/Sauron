@@ -47,6 +47,7 @@ Before running the calculation, you can toggle several parameters:
   - *Standard*: Employs static distance bounds and neighbor-search algorithms. Perfect for strict cutoff network designs.
   - *Voronoi*: Calculates interaction networks via Voronoi Tessellation. This effectively overcomes distance thresholding by mapping 3D space directly between adjoining residues, ensuring dense and topological biological relevance.
   - *ProDy InSty*: Discovers atomic-level chemical interactions (such as Pi-Stacking, Cation-Pi, and Hydrogen Bonds) with dynamic subtyping (e.g. `MC_MC`, `SC_MC`). Automatically enforces `RING` compatibility.
+  - *RinPy*: Computes an Elastic Network Model (ENM), generating specialized CSV reports to identify hinge residues (via Laplacian modes) and global centrality rankings (Degree, Closeness, Betweenness).
 - **Add Hydrogens**: Automatically runs `pdb2pqr` to add missing hydrogens to the structure before computing interactions. Explicitly modeling hydrogens is vital to maximizing the accuracy of ProDy's computations.
 - **Strict Angle**: Enforces a strict geometric constraint (>120°) for explicit Hydrogen Bonds.
 - **Remove Multiples**: Prunes redundant edges of the same type between two residues, preserving only the one with the shortest distance.
@@ -57,7 +58,7 @@ Before running the calculation, you can toggle several parameters:
 Once calculation finishes, the results are visualized seamlessly:
 
 1. **Synchronized 3D Viewers**: 
-   - On the left, the structural viewer powered by **PDBe Molstar** shows the 3D protein model.
+   - On the left, the structural viewer powered by **PDBe Molstar** shows the 3D protein model. It automatically adapts its background to match the UI's Light or Dark mode in real-time.
    - On the right, a 3D force-directed graph (powered by **3d-force-graph**) displays the topological interactions. Selecting a node in one viewer instantly highlights it in the other.
 2. **Node Coloring**: Color nodes in the graph based on their default setup, DSSP secondary structure assignment, chemical features, or Chain ID.
 3. **Primary Sequence**: A linear, 1-letter sequence viewer dynamically colored by DSSP. Hover or click on residues to select them in the 3D space.
@@ -66,6 +67,7 @@ Once calculation finishes, the results are visualized seamlessly:
    - **Top 10 Residues**: A leaderboard of the most central residues (configurable by Degree, Betweenness, Clustering, or Eigenvector Centrality).
    - **Inter-chain Interactions**: A dedicated table showing connections occurring between distinct chains.
    - **Ligand Interactions**: Detects non-standard amino acids (ligands) and maps their interactions.
+   - **RinPy Results**: A dedicated module specifically for the *RinPy* calculation method, listing top centrality metrics and identifying mechanical hinge residues crucial for conformational changes.
 5. **Network Complexity Analysis**: A dedicated panel mapping the degree distribution of the network (with Log-Log toggle) and providing overarching metrics like Network Density and Average Shortest Path.
 
 ---
@@ -79,7 +81,7 @@ python sauron.py <input_file> [options]
 ```
 
 ### Options:
-- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, or `insty`). Default is `standard`.
+- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, `insty`, or `rinpy`). Default is `standard`.
 - `--add-h`: Add explicit hydrogens using `pdb2pqr` prior to computations (Highly recommended when using `--calc-method insty`).
 - `--strict-angle`: Enforce strict >120° angle constraints for Hydrogen Bonds.
 - `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.
@@ -156,6 +158,7 @@ Sauron is built on the shoulders of the following exceptional open-source librar
 - **Requests**: Fetching structures from RCSB and AlphaFold APIs.
 - **pdb2pqr**: Explicit hydrogen addition capabilities.
 - **pydssp**: Neural-network based secondary structure assignment.
+- **rinpy**: Elastic Network Model calculation and hinge detection.
 
 **JavaScript Frontend:**
 - **PDBe Molstar**: 3D structural rendering.

@@ -1,6 +1,11 @@
 import sys
 import os
 import argparse
+try:
+    import rinpy
+except ImportError:
+    rinpy = None
+
 import subprocess
 import numpy as np
 import pandas as pd
@@ -80,7 +85,10 @@ def add_hydrogens(input_file):
         if getattr(sys, 'frozen', False):
             cmd = [sys.executable, "--run-pdb2pqr", "--ff=PARSE", "--keep-chain", input_file, output_file]
         else:
-            cmd = ["pdb2pqr", "--ff=PARSE", "--keep-chain", input_file, output_file]
+            import os
+            pdb2pqr_path = os.path.join(os.path.dirname(sys.executable), "pdb2pqr")
+            if not os.path.exists(pdb2pqr_path): pdb2pqr_path = "pdb2pqr"
+            cmd = [pdb2pqr_path, "--ff=PARSE", "--keep-chain", input_file, output_file]
             
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return output_file
@@ -95,7 +103,26 @@ def parse_structure(filepath):
         parser = PDBParser(QUIET=True)
     return parser.get_structure('struct', filepath)
 
-def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1, calc_method="standard", pqr_file=None):
+def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1, calc_method="standard", pqr_file=None, calc_energy=False, include_vdw=False):
+    def calc_energy_terms(a1, a2):
+        if not calc_energy: return 'nan'
+        try:
+            q1 = getattr(a1, 'occupancy', 0.0) or 0.0
+            q2 = getattr(a2, 'occupancy', 0.0) or 0.0
+            r1 = getattr(a1, 'bfactor', 0.0) or 0.0
+            r2 = getattr(a2, 'bfactor', 0.0) or 0.0
+            dist = np.linalg.norm(a1.getCoords() if hasattr(a1, 'getCoords') else a1.coord - (a2.getCoords() if hasattr(a2, 'getCoords') else a2.coord))
+            if dist == 0: return 0.0
+            e_elec = 332.0637 * q1 * q2 / (4.0 * dist * dist)
+            e_vdw = 0.0
+            if include_vdw and r1 > 0 and r2 > 0:
+                ratio = (r1 + r2) / dist
+                ratio6 = ratio**6
+                e_vdw = 0.1 * (ratio6**2 - 2 * ratio6)
+            return e_elec + e_vdw
+        except:
+            return 'nan'
+
     edges = []
     nodes = set()
     
@@ -104,6 +131,14 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
     if calc_method == "insty":
         try:
             import prody
+        except ImportError:
+            prody = None
+
+        try:
+            import rinpy
+        except ImportError:
+            rinpy = None
+
             import warnings
             import re
             warnings.filterwarnings('ignore')
@@ -119,12 +154,12 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 pos = m.group(2)
                 return f"{chid}:{pos}:_:{resname}", resname, pos
 
-            def add_edge(n1, n2, interaction, dist, angle, a1='', a2=''):
+            def add_edge(n1, n2, interaction, dist, angle, a1='', a2='', energy='nan'):
                 if n1 > n2: n1, n2 = n2, n1
                 edges.append({
                     'NodeId1': n1, 'Interaction': interaction, 'NodeId2': n2,
                     'Distance': f"{dist:.3f}", 'Angle': f"{angle:.3f}" if angle != 'nan' else 'nan', 
-                    'Atom1': a1, 'Atom2': a2, 'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                    'Energy': f"{energy:.4f}" if energy != 'nan' else 'nan', 'Atom1': a1, 'Atom2': a2, 'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                 })
             
             mc_atoms = ['N', 'C', 'CA', 'O']
@@ -176,6 +211,21 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                     n2, _, _ = parse_prody_node(ss[3], ss[5])
                     if n1 and n2:
                         add_edge(n1, n2, 'SSBOND:SC_SC', ss[6], 'nan', 'SG', 'SG')
+            
+            try:
+                wb_res = prody.calcWaterBridges(prody_atoms)
+                for bridge in wb_res:
+                    if hasattr(bridge, 'proteins') and len(bridge.proteins) == 2:
+                        a1, a2 = bridge.proteins
+                        n1 = f"{a1.getChid()}:{a1.getResnum()}:_:{a1.getResname()}"
+                        n2 = f"{a2.getChid()}:{a2.getResnum()}:_:{a2.getResname()}"
+                        dist = np.linalg.norm(a1.getCoords() - a2.getCoords())
+                        ctype = get_prody_contact_type(a1.getName(), a2.getName())
+                        add_edge(n1, n2, f'WATERBRIDGE:{ctype}', dist, 'nan', a1.getName(), a2.getName())
+                        # add nodes
+                        nodes.add(orig_struct[0][a1.getChid()][(' ', a1.getResnum(), ' ')]) # Approximation, actual node adding is handled below
+            except Exception as e:
+                pass
             
             for a in atoms:
                 if a.parent.id[0] != 'W':
@@ -239,7 +289,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 2.5:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'SSBOND:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': 'SG', 'Atom2': 'SG',
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(r1['SG'], r2['SG']):.4f}" if calc_energy else 'nan', 'Atom1': 'SG', 'Atom2': 'SG',
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
                     continue
@@ -259,7 +309,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 4.0:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'IONIC:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
                     break
@@ -268,7 +318,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 4.0:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'IONIC:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
                     break
@@ -283,7 +333,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 6.5:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'PIPISTACK:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': '', 'Atom2': '',
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': '', 'Atom2': '',
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': 'T', 'Model': model_num
                     })
 
@@ -297,7 +347,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 5.0:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'PICATION:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': '', 'Atom2': '',
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': '', 'Atom2': '',
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
         elif r2.resname in aromatics and r1.resname in pos:
@@ -309,18 +359,41 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 5.0:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'PICATION:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Atom1': '', 'Atom2': '',
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': '', 'Atom2': '',
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
 
-        # 5. HBOND & VDW
-        # Simplify: Donors (N, O, S), Acceptors (N, O, S)
-        # Using DA dist < 3.5 for HBOND if no H. DA dist < 3.9 if H present
+        # 5. METAL, HALOGEN, PIHBOND, HBOND & VDW
         donors_acceptors = {'N', 'O', 'S'}
+        halogens = {'F', 'CL', 'BR', 'I'}
+        metals = {'ZN', 'MG', 'CA', 'FE', 'CU', 'MN', 'CO', 'NI', 'K', 'NA'}
+        
+        pihbond_found = False
+        aromatics = ['PHE', 'TYR', 'TRP', 'HIS']
+        if r1.resname in aromatics or r2.resname in aromatics:
+            for r_arom, r_donor in [(r1, r2), (r2, r1)]:
+                if r_arom.resname in aromatics:
+                    c_arom = get_centroid(r_arom)
+                    if c_arom is not None:
+                        for a_donor in r_donor:
+                            if getattr(a_donor, 'element', a_donor.name[0]).upper() in donors_acceptors:
+                                dist = np.linalg.norm(c_arom - a_donor.coord)
+                                if dist <= 4.0:
+                                    edges.append({
+                                        'NodeId1': n1, 'Interaction': f'PIHBOND:SC_{"MC" if a_donor.name in MC_ATOMS else "SC"}', 'NodeId2': n2,
+                                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': '', 'Atom2': a_donor.name,
+                                        'Donor': format_node_id(r_donor), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                                    })
+                                    pihbond_found = True
+                                    break
+                if pihbond_found: break
+
         hbond_found = False
         vdw_found = False
         min_vdw_dist = 999.0
         best_vdw_pair = None
+        metal_found = False
+        halogen_found = False
         
         for ax, ay in atom_pairs:
             if format_node_id(ax.parent) > format_node_id(ay.parent):
@@ -329,8 +402,31 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 a1, a2 = ax, ay
                 
             dist = np.linalg.norm(a1.coord - a2.coord)
-            el1, el2 = a1.name[0], a2.name[0]
+            el1 = getattr(a1, 'element', a1.name[0]).upper()
+            el2 = getattr(a2, 'element', a2.name[0]).upper()
             
+            # METAL Coordination
+            if not metal_found:
+                if (el1 in metals and el2 in donors_acceptors) or (el2 in metals and el1 in donors_acceptors):
+                    if dist <= 3.0:
+                        edges.append({
+                            'NodeId1': format_node_id(a1.parent), 'Interaction': f'METAL:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
+                            'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                            'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                        })
+                        metal_found = True
+            
+            # HALOGEN Bond
+            if not halogen_found:
+                if (el1 in halogens and el2 in donors_acceptors) or (el2 in halogens and el1 in donors_acceptors):
+                    if dist <= 4.0:
+                        edges.append({
+                            'NodeId1': format_node_id(a1.parent), 'Interaction': f'HALOGEN:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
+                            'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                            'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                        })
+                        halogen_found = True
+
             # Check HBOND
             if el1 in donors_acceptors and el2 in donors_acceptors:
                 if dist <= 3.5:
@@ -343,8 +439,8 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                         
                     edges.append({
                         'NodeId1': format_node_id(a1.parent), 'Interaction': f'HBOND:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                        'Distance': f"{dist:.3f}", 'Angle': f"{angle_val:.3f}", 'Atom1': a1.name, 'Atom2': a2.name,
-                        'Donor': format_node_id(a1.parent), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': 1
+                        'Distance': f"{dist:.3f}", 'Angle': f"{angle_val:.3f}", 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                        'Donor': format_node_id(a1.parent), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
                     hbond_found = True
                     
@@ -355,18 +451,50 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                     min_vdw_dist = dist
                     best_vdw_pair = (a1, a2)
                     
-        if not hbond_found and best_vdw_pair:
+        if not hbond_found and not metal_found and not halogen_found and not pihbond_found and best_vdw_pair:
             a1, a2 = best_vdw_pair
             edges.append({
                 'NodeId1': format_node_id(a1.parent), 'Interaction': f'VDW:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                'Distance': f"{min_vdw_dist:.3f}", 'Angle': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
-                'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': 1
+                'Distance': f"{min_vdw_dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
             })
+
+    if calc_method != "insty":
+        # Calculate Water Bridges manually
+        waters = [a for a in atoms if a.parent.id[0] == 'W' and getattr(a, 'element', a.name[0]).upper() == 'O']
+        if waters:
+            donors_acceptors = {'N', 'O', 'S'}
+            try:
+                water_ns = NeighborSearch(atoms)
+                for w_atom in waters:
+                    close_atoms = water_ns.search(w_atom.coord, 3.5)
+                    prot_atoms = [a for a in close_atoms if a.parent.id[0] != 'W' and getattr(a, 'element', a.name[0]).upper() in donors_acceptors]
+                    if len(prot_atoms) >= 2:
+                        for i in range(len(prot_atoms)):
+                            for j in range(i+1, len(prot_atoms)):
+                                pa1, pa2 = prot_atoms[i], prot_atoms[j]
+                                r1, r2 = pa1.parent, pa2.parent
+                                if r1 == r2: continue
+                                n1 = format_node_id(r1)
+                                n2 = format_node_id(r2)
+                                dist = np.linalg.norm(pa1.coord - pa2.coord)
+                                if format_node_id(r1) > format_node_id(r2):
+                                    n1, n2 = n2, n1
+                                    pa1, pa2 = pa2, pa1
+                                edges.append({
+                                    'NodeId1': n1, 'Interaction': f'WATERBRIDGE:{get_contact_type(pa1, pa2)}', 'NodeId2': n2,
+                                    'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(pa1, pa2):.4f}" if calc_energy else 'nan', 'Atom1': pa1.name, 'Atom2': pa2.name,
+                                    'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                                })
+                                nodes.add(r1)
+                                nodes.add(r2)
+            except Exception as e:
+                pass
 
     # Return edges df
     edges_df = pd.DataFrame(edges)
     # Reorder to match exact RING format
-    cols = ['NodeId1', 'Interaction', 'NodeId2', 'Distance', 'Angle', 'Atom1', 'Atom2', 'Donor', 'Positive', 'Cation', 'Orientation', 'Model']
+    cols = ['NodeId1', 'Interaction', 'NodeId2', 'Distance', 'Angle', 'Energy', 'Atom1', 'Atom2', 'Donor', 'Positive', 'Cation', 'Orientation', 'Model']
     if not edges_df.empty:
         edges_df = edges_df[cols]
         def extract_sort_key(node_id):
@@ -520,6 +648,7 @@ def analyze_network(edges_df, nodes_df, prefix):
         })
         merged_top25.to_csv(f"{prefix}_top25_metrics.tsv", sep='\t', index=False)
         print(f"Network metrics saved to {prefix}_network_metrics.tsv and {prefix}_top25_metrics.tsv")
+    return degree_dict
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate RIN using RING 4.0 thresholds")
@@ -527,8 +656,10 @@ def main():
     parser.add_argument("--add-h", action="store_true", help="Add hydrogens using pdb2pqr")
     parser.add_argument("--strict-angle", action="store_true", help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg)")
     parser.add_argument("--remove-multiples", action="store_true", help="Remove multiple interactions of the same type between the same residue pair")
-    parser.add_argument("--calc-method", type=str, default="standard", choices=["standard", "voronoi", "insty"], help="Calculation method for interactions")
+    parser.add_argument("--calc-method", choices=["standard", "voronoi", "insty", "rinpy"], default="standard", help="Method for RIN calculation")
     parser.add_argument("--chains", type=str, help="Comma-separated list of chains to calculate (e.g. A,B,C)")
+    parser.add_argument("--energy", action="store_true", help="Calculate Interaction Energy (PENs). Requires a PQR file or --add-h.")
+    parser.add_argument("--vdw-energy", action="store_true", help="Include generic Lennard-Jones VDW term in energy calculation. If not set, only Electrostatics is computed.")
     args = parser.parse_args()
     
     input_file = args.input
@@ -549,8 +680,93 @@ def main():
         io.set_structure(temp_struct)
         io.save(temp_pdb)
         
+        if args.calc_method == 'rinpy':
+            try:
+                from rinpy import RINProcess
+            except ImportError:
+                RINProcess = None
+            if RINProcess is None:
+                print("RinPy is not installed. Please install it using 'pip install rinpy'.")
+                sys.exit(1)
+            
+            import shutil
+            
+            rinpy_in = f"{prefix}_rinpy_in"
+            rinpy_out = f"{prefix}_rinpy_out"
+            
+            os.makedirs(rinpy_in, exist_ok=True)
+            shutil.copy(temp_pdb, os.path.join(rinpy_in, os.path.basename(temp_pdb)))
+            
+            proc = RINProcess(output_path=rinpy_out, input_path=rinpy_in, num_workers=1)
+            try:
+                proc.start_process()
+            except Exception as e:
+                print(f"RinPy calculation failed: {e}")
+                sys.exit(1)
+                
+            print(f"RinPy calculation completed. Results are in {rinpy_out}")
+            
+            # Write Log
+            import datetime
+            with open(f"{prefix}_sauron.log", 'w') as logf:
+                logf.write(f"Sauron RIN Calculation Log\n")
+                logf.write(f"Timestamp: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                logf.write(f"Input File: {args.input}\n")
+                logf.write(f"Method: RINPY\n")
+                
+            # Extract Top 10 and Hinges
+            import json
+            import glob
+            
+            rinpy_summary = {
+                "degree": [],
+                "betweenness": [],
+                "closeness": [],
+                "hinges": {}
+            }
+            
+            def parse_rinpy_csv(filepath):
+                if not os.path.exists(filepath): return []
+                with open(filepath, 'r') as f:
+                    lines = f.readlines()
+                data = []
+                for line in lines:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:
+                        val = float(parts[1])
+                        res = parts[2]
+                        chain = parts[3]
+                        num = parts[4]
+                        data.append({"Residue": f"{chain}:{num}:{res}", "Value": val})
+                # sort descending
+                data.sort(key=lambda x: x["Value"], reverse=True)
+                return data[:10]
+                
+            rinpy_summary["degree"] = parse_rinpy_csv(os.path.join(rinpy_out, f"{prefix}_temp", f"{prefix}_temp_centrality_degree.csv"))
+            rinpy_summary["betweenness"] = parse_rinpy_csv(os.path.join(rinpy_out, f"{prefix}_temp", f"{prefix}_temp_centrality_betweenness.csv"))
+            rinpy_summary["closeness"] = parse_rinpy_csv(os.path.join(rinpy_out, f"{prefix}_temp", f"{prefix}_temp_centrality_closeness.csv"))
+            
+            hinge_files = glob.glob(os.path.join(rinpy_out, f"{prefix}_temp", "hinge_modes", "*_hinge_residues.txt"))
+            for hf in hinge_files:
+                mode_name = os.path.basename(hf).replace(f"{prefix}_temp_laplacian_", "").replace("_hinge_residues.txt", "")
+                hinges = []
+                with open(hf, 'r') as f:
+                    for line in f:
+                        parts = line.strip().split(';')
+                        if len(parts) >= 3:
+                            hinges.append(f"{parts[1]}:{parts[2]}:{parts[0]}")
+                rinpy_summary["hinges"][mode_name] = hinges
+                
+            with open(f"{prefix}_rinpy_summary.json", "w") as f:
+                json.dump(rinpy_summary, f)
+                
+            if os.path.exists(temp_pdb): os.remove(temp_pdb)
+            if temp_pdb != temp_pdb and os.path.exists(temp_pdb): os.remove(temp_pdb)
+            shutil.rmtree(rinpy_in)
+            continue
         if args.add_h:
             pqr_file = add_hydrogens(temp_pdb)
+            
             try:
                 struct_to_calc = list(parse_structure(pqr_file).get_models())[0]
             except:
@@ -575,7 +791,7 @@ def main():
                 if chain.id not in valid_chains:
                     struct_to_calc.detach_child(chain.id)
             
-        edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num, calc_method=args.calc_method, pqr_file=pqr_file)
+        edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num, calc_method=args.calc_method, pqr_file=pqr_file, calc_energy=args.energy, include_vdw=args.vdw_energy)
         nodes_df = build_nodes_df(nodes, edges_df, os.path.basename(args.input), structure=struct_to_calc, model_num=model_num)
         
         edges_out = f"{prefix}.edges"
@@ -587,7 +803,46 @@ def main():
             nodes_df.to_csv(nodes_out, sep='\t', index=False)
             
         print(f"Generated {edges_out} and {nodes_out}")
-        analyze_network(edges_df, nodes_df, prefix)
+        degree_dict = analyze_network(edges_df, nodes_df, prefix)
+        
+        # Write Log
+        import datetime
+        with open(f"{prefix}_sauron.log", 'w') as logf:
+            logf.write(f"Sauron RIN Calculation Log\n")
+            logf.write(f"Timestamp: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            logf.write(f"Input File: {args.input}\n")
+            logf.write(f"Method: {args.calc_method}\n")
+            logf.write(f"Strict Angle: {args.strict_angle}\n")
+            logf.write(f"Remove Multiples: {args.remove_multiples}\n")
+            logf.write(f"Energy (PEN): {args.energy}\n")
+            logf.write(f"Include VDW: {args.vdw_energy}\n")
+            logf.write(f"Chains: {args.chains if args.chains else 'ALL'}\n")
+            logf.write(f"Total Nodes: {len(nodes)}\n")
+            logf.write(f"Total Edges: {len(edges_df)}\n")
+
+        # Write Degree PDB
+        from Bio.PDB import PDBIO
+        
+        # Helper to format node ID for structure traversal
+        def get_node_id_for_atom(res):
+            chain_id = res.parent.id
+            res_id = res.id[1]
+            ins_code = res.id[2].strip() if res.id[2].strip() else '_'
+            res_name = res.resname
+            return f"{chain_id}:{res_id}:{ins_code}:{res_name}"
+
+        # `struct_to_calc` contains the subset of chains or the whole structure
+        # But `orig_struct` has the exact coordinates. We can annotate `orig_struct`.
+        for model in orig_struct:
+            for chain in model:
+                for res in chain:
+                    node_id = get_node_id_for_atom(res)
+                    deg = degree_dict.get(node_id, 0)
+                    for atom in res:
+                        atom.set_bfactor(deg)
+        io = PDBIO()
+        io.set_structure(orig_struct)
+        io.save(f"{prefix}_degree.pdb")
         
         if os.path.exists(temp_pdb): os.remove(temp_pdb)
         if pqr_file != temp_pdb and os.path.exists(pqr_file): os.remove(pqr_file)
