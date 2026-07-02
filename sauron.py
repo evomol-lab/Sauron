@@ -131,14 +131,6 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
     if calc_method == "insty":
         try:
             import prody
-        except ImportError:
-            prody = None
-
-        try:
-            import rinpy
-        except ImportError:
-            rinpy = None
-
             import warnings
             import re
             warnings.filterwarnings('ignore')
