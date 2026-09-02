@@ -38,6 +38,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Documentation tab: switches between the calculator (upload form / results)
+    // and a rendered view of DOCUMENTATION.md, fetched once and cached client-side.
+    const navCalculator = document.getElementById('nav-calculator');
+    const navDocumentation = document.getElementById('nav-documentation');
+    const documentationView = document.getElementById('documentation-view');
+    const docContent = document.getElementById('doc-content');
+    const mainSection = document.querySelector('main');
+    const appContainer = document.querySelector('.container');
+    let docsLoaded = false;
+
+    async function loadDocumentation() {
+        try {
+            const res = await fetch('/documentation');
+            if (!res.ok) throw new Error('Documentation file not found on the server.');
+            const markdown = await res.text();
+            docContent.innerHTML = marked.parse(markdown);
+            docsLoaded = true;
+        } catch (e) {
+            docContent.innerHTML = `<div class="doc-loading">Failed to load documentation: ${e.message}</div>`;
+        }
+    }
+
+    function showView(view) {
+        const showDocs = view === 'documentation';
+        navCalculator.classList.toggle('active', !showDocs);
+        navDocumentation.classList.toggle('active', showDocs);
+        mainSection.style.display = showDocs ? 'none' : 'block';
+        documentationView.style.display = showDocs ? 'block' : 'none';
+
+        if (showDocs) {
+            appContainer.classList.add('expanded');
+            if (!docsLoaded) loadDocumentation();
+        } else {
+            // Restore whichever width fits the calculator's current state (the
+            // results dashboard wants the wide layout too; the upload form doesn't).
+            appContainer.classList.toggle('expanded', document.getElementById('success-state').style.display === 'block');
+        }
+    }
+
+    navCalculator.addEventListener('click', () => showView('calculator'));
+    navDocumentation.addEventListener('click', () => showView('documentation'));
+
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const fileNameDisplay = document.getElementById('file-name');
@@ -150,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('calc_method', document.getElementById('calc_method').value);
         formData.append('calc_energy', document.getElementById('calc_energy').checked);
         formData.append('vdw_energy', document.getElementById('vdw_energy').checked);
+        formData.append('water_bridges', document.getElementById('water_bridges').checked);
         
         const chainsOpt = document.querySelector('input[name="chains_opt"]:checked').value;
         formData.append('chains_opt', chainsOpt);
@@ -404,7 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'IONIC': '#ef4444', // red
                     'PIPISTACK': '#10b981', // green
                     'PICATION': '#f59e0b', // orange
-                    'SSBOND': '#eab308' // yellow
+                    'SSBOND': '#eab308', // yellow
+                    'WATERBRIDGE': '#06b6d4', // cyan
+                    'METAL': '#a855f7', // purple
+                    'HALOGEN': '#84cc16', // lime
+                    'PIHBOND': '#ec4899' // pink
                 };
                 
                 const dsspColors = {
@@ -500,14 +547,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 graphViewerDiv.innerHTML = '';
-                const initColorType = document.getElementById('node-color-select').value;
-                updateLegend(initColorType);
-                
+                let currentColorType = document.getElementById('node-color-select').value;
+                updateLegend(currentColorType);
+
+                // Shared selection state, so a residue picked in *any* view (3D
+                // structure, graph, sequence bar, top-residues table) highlights
+                // consistently everywhere else.
+                const HIGHLIGHT_COLOR = '#fbbf24'; // amber - distinct from every palette above
+                let selectedNodeId = null;
+                let selectedSeqKey = null;
+                const seqSpanMap = {}; // "chain:position" -> sequence-bar <span>, filled in by renderSequence()
+
+                const nodeRenderColor = (node) => node.id === selectedNodeId ? HIGHLIGHT_COLOR : getNodeColor(node, currentColorType);
+
                 graph = ForceGraph3D()(graphViewerDiv)
                     .graphData(graphData)
                     .nodeLabel('id')
                     .nodeVal(node => node.degree || 1)
-                    .nodeColor(node => getNodeColor(node, initColorType))
+                    .nodeColor(nodeRenderColor)
                     .linkColor(link => {
                         if (link.interaction) {
                             const type = link.interaction.split(':')[0];
@@ -517,43 +574,83 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                     .linkWidth(2)
                     .backgroundColor('rgba(0,0,0,0)')
-                    .onNodeClick(node => {
-                        // Focus camera on node
+                    .onNodeClick(node => selectNode(node, { fromGraph: true }));
+
+                // Selects `node` and syncs the highlight across the 3D structure viewer,
+                // the interaction graph, and the sequence bar. `opts.fromGraph`/`fromMolstar`
+                // skip re-driving the view the selection originated from, so a click
+                // doesn't fight the camera/selection the user just set there themselves.
+                function selectNode(node, opts = {}) {
+                    if (!node) return;
+
+                    selectedNodeId = node.id;
+                    graph.nodeColor(nodeRenderColor);
+
+                    if (node.x !== undefined) {
                         const distance = 40;
-                        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
                         graph.cameraPosition(
                             { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
                             node,
                             1000 // ms transition duration
                         );
-                        
-                        // Highlight in Molstar
-                        if (molstarViewer) {
-                            molstarViewer.visual.clearSelection();
-                            molstarViewer.visual.select({
-                                data: [{
-                                    struct_asym_id: node.chain,
-                                    start_residue_number: parseInt(node.position),
-                                    end_residue_number: parseInt(node.position)
-                                }]
-                            });
-                            
-                            molstarViewer.visual.focus([{
+                    }
+
+                    if (molstarViewer && !opts.fromMolstar) {
+                        molstarViewer.visual.clearSelection();
+                        molstarViewer.visual.select({
+                            data: [{
                                 struct_asym_id: node.chain,
                                 start_residue_number: parseInt(node.position),
                                 end_residue_number: parseInt(node.position)
-                            }]);
-                        }
-                        
-                        // Update Interaction Table
-                        updateInteractionTable(node, graphData.links, metricsData);
-                    });
-                    
+                            }]
+                        });
+
+                        molstarViewer.visual.focus([{
+                            struct_asym_id: node.chain,
+                            start_residue_number: parseInt(node.position),
+                            end_residue_number: parseInt(node.position)
+                        }]);
+                    }
+
+                    if (selectedSeqKey && seqSpanMap[selectedSeqKey]) {
+                        seqSpanMap[selectedSeqKey].style.outline = 'none';
+                    }
+                    const seqKey = `${node.chain}:${node.position}`;
+                    selectedSeqKey = seqKey;
+                    if (seqSpanMap[seqKey]) {
+                        seqSpanMap[seqKey].style.outline = `2px solid ${HIGHLIGHT_COLOR}`;
+                        seqSpanMap[seqKey].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+
+                    updateInteractionTable(node, graphData.links, metricsData);
+                }
+
                 document.getElementById('node-color-select').addEventListener('change', (e) => {
-                    const sel = e.target.value;
-                    graph.nodeColor(node => getNodeColor(node, sel));
-                    updateLegend(sel);
+                    currentColorType = e.target.value;
+                    graph.nodeColor(nodeRenderColor);
+                    updateLegend(currentColorType);
                 });
+
+                // Reverse sync: clicking a residue in the 3D structure viewer (Mol*)
+                // highlights the matching node in the graph. Mol* dispatches this as a
+                // DOM CustomEvent (not something scoped to the plugin instance), so the
+                // previous run's listener - which closes over a now-stale graphData/graph
+                // from an earlier structure - must be torn down first.
+                if (window.__sauronMolstarClickHandler) {
+                    document.removeEventListener('PDB.molstar.click', window.__sauronMolstarClickHandler);
+                }
+                window.__sauronMolstarClickHandler = (e) => {
+                    const info = e.eventData;
+                    if (!info || info.auth_asym_id === undefined || info.auth_seq_id === undefined) return;
+                    const chain = info.auth_asym_id;
+                    const pos = parseInt(info.auth_seq_id);
+                    const graphNode = graphData.nodes.find(gn => gn.chain === chain && parseInt(gn.position) === pos);
+                    if (graphNode) {
+                        selectNode(graphNode, { fromMolstar: true });
+                    }
+                };
+                document.addEventListener('PDB.molstar.click', window.__sauronMolstarClickHandler);
                 
                 // Top 10 Residues Logic
                 const renderTopResidues = () => {
@@ -608,36 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         tr.addEventListener('click', () => {
                             const graphNode = graphData.nodes.find(gn => gn.id === n.id);
-                            if (graphNode) {
-                                // Simulate focus camera
-                                const distance = 40;
-                                const distRatio = 1 + distance/Math.hypot(graphNode.x, graphNode.y, graphNode.z);
-                                graph.cameraPosition(
-                                    { x: graphNode.x * distRatio, y: graphNode.y * distRatio, z: graphNode.z * distRatio },
-                                    graphNode,
-                                    1000
-                                );
-                                
-                                // Highlight in Molstar
-                                if (molstarViewer) {
-                                    molstarViewer.visual.clearSelection();
-                                    molstarViewer.visual.select({
-                                        data: [{
-                                            struct_asym_id: graphNode.chain,
-                                            start_residue_number: parseInt(graphNode.position),
-                                            end_residue_number: parseInt(graphNode.position)
-                                        }]
-                                    });
-                                    
-                                    molstarViewer.visual.focus([{
-                                        struct_asym_id: graphNode.chain,
-                                        start_residue_number: parseInt(graphNode.position),
-                                        end_residue_number: parseInt(graphNode.position)
-                                    }]);
-                                }
-                                
-                                updateInteractionTable(graphNode, graphData.links, metricsData);
-                            }
+                            selectNode(graphNode);
                         });
                         
                         tbody.appendChild(tr);
@@ -733,29 +801,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 resSpan.style.opacity = '1';
                             };
                             
-                            resSpan.onclick = () => {
-                                // Focus in 3D Force Graph
-                                if(graph && node.x !== undefined) {
-                                    const distance = 40;
-                                    const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-                                    graph.cameraPosition(
-                                        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-                                        node,
-                                        1000
-                                    );
-                                }
-                                
-                                // Focus in Molstar
-                                if(molstarViewer) {
-                                    molstarViewer.visual.clearSelection();
-                                    molstarViewer.visual.select({ data: [{ struct_asym_id: node.chain, start_residue_number: parseInt(node.position), end_residue_number: parseInt(node.position) }] });
-                                    molstarViewer.visual.focus([{ struct_asym_id: node.chain, start_residue_number: parseInt(node.position), end_residue_number: parseInt(node.position) }]);
-                                }
-                                
-                                // Update interaction table
-                                updateInteractionTable(node, graphData.links, metricsData);
-                            };
-                            
+                            resSpan.onclick = () => selectNode(node);
+
+                            seqSpanMap[`${node.chain}:${node.position}`] = resSpan;
                             seqWrapper.appendChild(resSpan);
                         });
                         
@@ -802,25 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             tr.onmouseover = () => tr.style.backgroundColor = 'rgba(255,255,255,0.05)';
                             tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
                             
-                            tr.onclick = () => {
-                                if (sNode) {
-                                    const distance = 40;
-                                    const distRatio = 1 + distance/Math.hypot(sNode.x || 0, sNode.y || 0, sNode.z || 0);
-                                    if(graph && sNode.x !== undefined) {
-                                        graph.cameraPosition(
-                                            { x: sNode.x * distRatio, y: sNode.y * distRatio, z: sNode.z * distRatio },
-                                            sNode,
-                                            1000
-                                        );
-                                    }
-                                    if(molstarViewer) {
-                                        molstarViewer.visual.clearSelection();
-                                        molstarViewer.visual.select({ data: [{ struct_asym_id: sNode.chain, start_residue_number: parseInt(sNode.position), end_residue_number: parseInt(sNode.position) }] });
-                                        molstarViewer.visual.focus([{ struct_asym_id: sNode.chain, start_residue_number: parseInt(sNode.position), end_residue_number: parseInt(sNode.position) }]);
-                                    }
-                                    updateInteractionTable(sNode, graphData.links, metricsData);
-                                }
-                            };
+                            tr.onclick = () => selectNode(sNode);
                             
                             const dist = link.distance ? link.distance : 'N/A';
                             const ang = link.angle ? link.angle : 'N/A';
@@ -888,25 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const ligNode = isLigand(sNode.residue) ? sNode : tNode;
                             const targetNode = isLigand(sNode.residue) ? tNode : sNode;
                             
-                            tr.onclick = () => {
-                                if (ligNode) {
-                                    const distance = 40;
-                                    const distRatio = 1 + distance/Math.hypot(ligNode.x || 0, ligNode.y || 0, ligNode.z || 0);
-                                    if(graph && ligNode.x !== undefined) {
-                                        graph.cameraPosition(
-                                            { x: ligNode.x * distRatio, y: ligNode.y * distRatio, z: ligNode.z * distRatio },
-                                            ligNode,
-                                            1000
-                                        );
-                                    }
-                                    if(molstarViewer) {
-                                        molstarViewer.visual.clearSelection();
-                                        molstarViewer.visual.select({ data: [{ struct_asym_id: ligNode.chain, start_residue_number: parseInt(ligNode.position), end_residue_number: parseInt(ligNode.position) }] });
-                                        molstarViewer.visual.focus([{ struct_asym_id: ligNode.chain, start_residue_number: parseInt(ligNode.position), end_residue_number: parseInt(ligNode.position) }]);
-                                    }
-                                    updateInteractionTable(ligNode, graphData.links, metricsData);
-                                }
-                            };
+                            tr.onclick = () => selectNode(ligNode);
                             
                             const dist = link.distance ? link.distance : 'N/A';
                             const ang = link.angle ? link.angle : 'N/A';

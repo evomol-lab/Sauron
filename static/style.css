@@ -563,3 +563,188 @@ body.light-mode .app-footer {
     color: var(--text-muted);
     font-weight: 600;
 }
+
+/* Top-level nav (Calculator / Documentation) */
+.app-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.app-nav-btn {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+body.light-mode .app-nav-btn {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.app-nav-btn:hover {
+    color: var(--text-main);
+    border-color: var(--primary-color);
+}
+
+.app-nav-btn.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    border-color: transparent;
+    color: white;
+}
+
+/* Documentation tab */
+.documentation-view {
+    animation: fadeIn 0.3s ease;
+}
+
+.doc-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 8px 4px 24px;
+    line-height: 1.65;
+}
+
+.doc-loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 0;
+}
+
+.doc-content h1, .doc-content h2, .doc-content h3, .doc-content h4 {
+    font-weight: 700;
+    margin: 28px 0 12px;
+    line-height: 1.3;
+}
+
+.doc-content h1 {
+    font-size: 1.7rem;
+    background: linear-gradient(135deg, #fff, #a5b4fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+body.light-mode .doc-content h1 {
+    -webkit-text-fill-color: initial;
+    background: none;
+    color: var(--text-main);
+}
+
+.doc-content h2 {
+    font-size: 1.35rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 8px;
+}
+
+.doc-content h3 {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.doc-content h1:first-child {
+    margin-top: 0;
+}
+
+.doc-content p, .doc-content ul, .doc-content ol {
+    margin-bottom: 14px;
+    color: var(--text-main);
+}
+
+.doc-content ul, .doc-content ol {
+    padding-left: 24px;
+}
+
+.doc-content li {
+    margin-bottom: 4px;
+}
+
+.doc-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.doc-content a:hover {
+    text-decoration: underline;
+}
+
+.doc-content code {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+}
+
+body.light-mode .doc-content code {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.doc-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+body.light-mode .doc-content pre {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.doc-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.doc-content blockquote {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 14px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.doc-content hr {
+    border: none;
+    border-top: 1px solid var(--panel-border);
+    margin: 28px 0;
+}
+
+.doc-content img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.doc-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    display: block;
+    overflow-x: auto;
+}
+
+.doc-content th, .doc-content td {
+    padding: 8px 12px;
+    border: 1px solid var(--panel-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.doc-content th {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+body.light-mode .doc-content th {
+    background: rgba(0, 0, 0, 0.05);
+}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +8,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- PDBe Molstar -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-light.css">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-plugin.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-light.css">
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-plugin.js"></script>
     <!-- 3D Force Graph -->
     <script src="https://unpkg.com/3d-force-graph"></script>
     <!-- Plotly -->
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+    <!-- Marked (Markdown rendering for the Documentation tab) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 </head>
+
 <body>
     <div class="background-orbs">
         <div class="orb orb-1"></div>
@@ -21,22 +27,43 @@
     </div>
 
     <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Mode">
-        <svg id="theme-icon-light" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-        <svg id="theme-icon-dark" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg id="theme-icon-light" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg id="theme-icon-dark" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
     </button>
     <div class="container glass-panel">
         <header>
             <div class="logo-container">
-                <img id="logo-img" src="{{ url_for('static', filename='sauron-rins-logo-inv.png') }}" alt="Sauron Logo" style="width: 300px; height: auto; max-width: 100%;">
+                <img id="logo-img" src="{{ url_for('static', filename='sauron-rins-logo-inv.png') }}" alt="Sauron Logo"
+                    style="width: 300px; height: auto; max-width: 100%;">
             </div>
             <p class="subtitle">Residue Interaction Network Calculator</p>
+            <nav class="app-nav">
+                <button type="button" class="app-nav-btn active" id="nav-calculator" data-view="calculator">Calculator</button>
+                <button type="button" class="app-nav-btn" id="nav-documentation" data-view="documentation">Documentation</button>
+            </nav>
         </header>
 
         <main>
             <form id="upload-form">
-                <div style="margin-bottom: 16px; display: flex; gap: 24px; justify-content: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid var(--panel-border);">
+                <div
+                    style="margin-bottom: 16px; display: flex; gap: 24px; justify-content: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid var(--panel-border);">
                     <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                        <input type="radio" name="input_mode" value="upload" checked onchange="window.toggleInputMode()">
+                        <input type="radio" name="input_mode" value="upload" checked
+                            onchange="window.toggleInputMode()">
                         Upload File
                     </label>
                     <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -44,46 +71,61 @@
                         Fetch Structure
                     </label>
                 </div>
-                
+
                 <!-- File Upload Zone -->
                 <div class="upload-zone" id="drop-zone">
                     <input type="file" id="file-input" name="file" accept=".pdb, .cif" hidden>
-                    <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     <p class="upload-text">Drag & drop your PDB or CIF file here</p>
                     <p class="upload-subtext">or click to browse</p>
                     <div class="file-name-display" id="file-name">No file selected</div>
                 </div>
-                
+
                 <!-- Fetch Zone -->
-                <div class="upload-zone" id="fetch-zone" style="display: none; flex-direction: column; gap: 16px; min-height: 200px; justify-content: center;">
+                <div class="upload-zone" id="fetch-zone"
+                    style="display: none; flex-direction: column; gap: 16px; min-height: 200px; justify-content: center;">
                     <div style="font-weight: 500; font-size: 1.1rem; margin-bottom: 8px;">Fetch from Database</div>
-                    <div style="display: flex; gap: 12px; align-items: center; max-width: 400px; width: 100%; margin: 0 auto;">
-                        <select id="fetch_db" name="fetch_db" style="padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;">
+                    <div
+                        style="display: flex; gap: 12px; align-items: center; max-width: 400px; width: 100%; margin: 0 auto;">
+                        <select id="fetch_db" name="fetch_db"
+                            style="padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;">
                             <option value="pdb">RCSB PDB</option>
                             <option value="alphafold">AlphaFold DB</option>
                         </select>
-                        <input type="text" id="fetch_id" name="fetch_id" placeholder="ID (e.g. 1AFW)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;" oninput="window.validateFetchInput()">
+                        <input type="text" id="fetch_id" name="fetch_id" placeholder="ID (e.g. 1AFW)"
+                            style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.4); color: inherit; font-size: 1rem;"
+                            oninput="window.validateFetchInput()">
                     </div>
                 </div>
 
                 <!-- Parameters -->
                 <div class="parameters">
                     <h2>Calculation Parameters</h2>
-                    
+
                     <div style="margin-bottom: 16px;">
                         <div class="toggle-info" style="margin-bottom: 8px;">
                             <span class="toggle-title">Calculation Method</span>
-                            <span class="toggle-desc">Select the algorithm to define interactions. (Hydrogens are added automatically)</span>
+                            <span class="toggle-desc">Select the algorithm to define interactions. (Hydrogens are added
+                                automatically)</span>
                         </div>
-                        <select id="calc_method" name="calc_method" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 1rem; font-family: inherit; cursor: pointer; outline: none;">
-                            <option value="standard" style="background: #111111; color: #E0E0E0;">Standard (Distance cutoffs)</option>
-                            <option value="voronoi" style="background: #111111; color: #E0E0E0;">Voronoi Tessellation</option>
+                        <select id="calc_method" name="calc_method"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 1rem; font-family: inherit; cursor: pointer; outline: none;">
+                            <option value="standard" style="background: #111111; color: #E0E0E0;">Standard (Distance
+                                cutoffs)</option>
+                            <option value="voronoi" style="background: #111111; color: #E0E0E0;">Voronoi Tessellation
+                            </option>
                             <option value="insty" style="background: #111111; color: #E0E0E0;">ProDy InSty</option>
-                            <option value="rinpy" style="background: #111111; color: #E0E0E0;">RinPy (Elastic Network Model)</option>
+                            <option value="rinpy" style="background: #111111; color: #E0E0E0;">RinPy (Elastic Network
+                                Model)</option>
                         </select>
                     </div>
 
@@ -92,31 +134,44 @@
                     <label class="toggle-switch" id="pen-container">
                         <div class="toggle-info">
                             <span class="toggle-title">Protein Energy Network (PEN)</span>
-                            <span class="toggle-desc">Calculate interaction energies (Electrostatics). Requires computing partial charges (PDB2PQR).</span>
+                            <span class="toggle-desc">Calculate interaction energies (Electrostatics). Requires
+                                computing partial charges (PDB2PQR).</span>
                         </div>
                         <input type="checkbox" id="calc_energy" name="calc_energy">
                         <span class="slider"></span>
                     </label>
 
-                    <label class="toggle-switch" id="vdw-container" style="display: none; margin-top: 10px; margin-left: 20px; border-left: 2px solid var(--panel-border); padding-left: 10px;">
+                    <label class="toggle-switch" id="vdw-container"
+                        style="display: none; margin-top: 10px; margin-left: 20px; border-left: 2px solid var(--panel-border); padding-left: 10px;">
                         <div class="toggle-info">
                             <span class="toggle-title">Include van der Waals</span>
-                            <span class="toggle-desc">Add generic Lennard-Jones terms to the total energy. If disabled, only Electrostatics is computed.</span>
+                            <span class="toggle-desc">Add generic Lennard-Jones terms to the total energy. If disabled,
+                                only Electrostatics is computed.</span>
                         </div>
                         <input type="checkbox" id="vdw_energy" name="vdw_energy">
                         <span class="slider"></span>
                     </label>
+                    <label class="toggle-switch" id="waterbridge-container" style="margin-top: 10px;">
+                        <div class="toggle-info">
+                            <span class="toggle-title">Water Bridges</span>
+                            <span class="toggle-desc">Detect WATERBRIDGE edges between residues sharing a
+                                crystallographic water.</span>
+                        </div>
+                        <input type="checkbox" id="water_bridges" name="water_bridges">
+                        <span class="slider"></span>
+                    </label>
+
                     <script>
                         const calcEnergyToggle = document.getElementById('calc_energy');
                         const vdwToggle = document.getElementById('vdw_energy');
-                        
-                        calcEnergyToggle.addEventListener('change', function() {
+
+                        calcEnergyToggle.addEventListener('change', function () {
                             document.getElementById('vdw-container').style.display = this.checked ? 'flex' : 'none';
                         });
 
                         const penContainer = document.getElementById('pen-container');
                         const vdwContainer = document.getElementById('vdw-container');
-                        
+
                         calcEnergyToggle.addEventListener('change', (e) => {
                             if (e.target.checked) {
                                 vdwContainer.style.display = 'flex';
@@ -125,7 +180,10 @@
                                 vdwToggle.checked = false;
                             }
                         });
-                        
+
+                        const waterBridgeContainer = document.getElementById('waterbridge-container');
+                        const waterBridgeToggle = document.getElementById('water_bridges');
+
                         const calcMethodSelect = document.getElementById('calc_method');
                         calcMethodSelect.addEventListener('change', (e) => {
                             if (e.target.value === 'rinpy') {
@@ -139,9 +197,18 @@
                                     vdwContainer.style.display = 'flex';
                                 }
                             }
+                            // Water bridges aren't computed for 'insty' (ProDy's own
+                            // interaction set) or 'rinpy' (elastic-network model, no
+                            // typed edges at all) - hide the toggle for those methods.
+                            if (e.target.value === 'insty' || e.target.value === 'rinpy') {
+                                waterBridgeContainer.style.display = 'none';
+                                waterBridgeToggle.checked = false;
+                            } else {
+                                waterBridgeContainer.style.display = 'flex';
+                            }
                         });
                     </script>
-                    
+
                     <div style="margin-top: 16px; border-top: 1px solid var(--panel-border); padding-top: 16px;">
                         <div class="toggle-info" style="margin-bottom: 8px;">
                             <span class="toggle-title">Chain Selection</span>
@@ -149,14 +216,17 @@
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="chains_opt" value="all" checked onchange="document.getElementById('chains_input').style.display='none'">
+                                <input type="radio" name="chains_opt" value="all" checked
+                                    onchange="document.getElementById('chains_input').style.display='none'">
                                 All Chains
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="chains_opt" value="specific" onchange="document.getElementById('chains_input').style.display='block'">
+                                <input type="radio" name="chains_opt" value="specific"
+                                    onchange="document.getElementById('chains_input').style.display='block'">
                                 Specific Chains
                             </label>
-                            <input type="text" id="chains_input" name="chains_input" placeholder="e.g. A,B,C" style="display: none; width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--text-color); margin-top: 4px; font-family: inherit;">
+                            <input type="text" id="chains_input" name="chains_input" placeholder="e.g. A,B,C"
+                                style="display: none; width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--text-color); margin-top: 4px; font-family: inherit;">
                         </div>
                     </div>
                 </div>
@@ -169,9 +239,10 @@
             </form>
 
             <div id="error-message" class="error-message"></div>
-            
+
             <div id="success-state" class="success-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
@@ -181,20 +252,26 @@
                     <a id="download-btn" class="download-btn" href="#">Download Results (.zip)</a>
                     <button id="reset-btn" class="reset-btn">Calculate Another</button>
                 </div>
-                
+
                 <div class="visualization-panel">
                     <div class="viewer-container">
                         <div class="viewer-header">3D Structure</div>
                         <div id="structure-viewer" class="viewer-canvas"></div>
                     </div>
                     <div class="viewer-container">
-                        <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div class="viewer-header"
+                            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <span>Interaction Graph</span>
                             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                                <div id="edge-legend" style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;"></div>
+                                <div id="edge-legend"
+                                    style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;">
+                                </div>
                                 <div style="width: 1px; height: 16px; background-color: var(--panel-border);"></div>
-                                <div id="color-legend" style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;"></div>
-                                <select id="node-color-select" style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
+                                <div id="color-legend"
+                                    style="display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;">
+                                </div>
+                                <select id="node-color-select"
+                                    style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
                                     <option value="default">Default</option>
                                     <option value="dssp">DSSP</option>
                                     <option value="chemical">Chemical Feature</option>
@@ -205,22 +282,31 @@
                         <div id="graph-viewer" class="viewer-canvas"></div>
                     </div>
                 </div>
-                
-                <div id="sequence-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+
+                <div id="sequence-container" class="viewer-container"
+                    style="display: none; width: 100%; margin-top: 24px;">
                     <div class="viewer-header">
                         <span style="font-weight: 600;">Primary Sequence</span>
-                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Select a residue to focus in the 3D viewers and view interactions</div>
-                        <div id="sequence-legend" style="display: flex; gap: 12px; font-size: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 12px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 6px;"></div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">
+                            Select a residue to focus in the 3D viewers and view interactions</div>
+                        <div id="sequence-legend"
+                            style="display: flex; gap: 12px; font-size: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 12px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 6px;">
+                        </div>
                     </div>
-                    <div id="sequence-content" style="padding: 16px; display: flex; flex-direction: column; gap: 16px; max-height: 250px; overflow-y: auto;">
+                    <div id="sequence-content"
+                        style="padding: 16px; display: flex; flex-direction: column; gap: 16px; max-height: 250px; overflow-y: auto;">
                         <!-- Sequence chains will be injected here -->
                     </div>
                 </div>
-                
-                <div id="interaction-details-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
-                    <div class="viewer-header" id="interaction-header" style="display: flex; flex-direction: column; gap: 8px;">
+
+                <div id="interaction-details-container" class="viewer-container"
+                    style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                    <div class="viewer-header" id="interaction-header"
+                        style="display: flex; flex-direction: column; gap: 8px;">
                         <div id="interaction-title" style="font-weight: 600;">Node Interactions</div>
-                        <div id="node-metrics" style="font-size: 0.85rem; font-weight: normal; display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-muted);"></div>
+                        <div id="node-metrics"
+                            style="font-size: 0.85rem; font-weight: normal; display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-muted);">
+                        </div>
                     </div>
                     <div class="table-container" style="padding: 16px; overflow-x: auto;">
                         <table id="interaction-table" style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -237,11 +323,14 @@
                         </table>
                     </div>
                 </div>
-                
-                <div id="top-residues-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
-                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+
+                <div id="top-residues-container" class="viewer-container"
+                    style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                    <div class="viewer-header"
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <span style="font-weight: 600;">Top 10 Residues</span>
-                        <select id="top-feature-select" style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
+                        <select id="top-feature-select"
+                            style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid var(--panel-border); font-size: 0.85rem; cursor: pointer; outline: none;">
                             <option value="degree">Degree</option>
                             <option value="betweenness">Betweenness Centrality</option>
                             <option value="eigenvector">Eigenvector Centrality</option>
@@ -249,7 +338,8 @@
                         </select>
                     </div>
                     <div class="table-container" style="padding: 16px; overflow-x: auto;">
-                        <table id="top-residues-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <table id="top-residues-table"
+                            style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 1px solid var(--panel-border);">
                                     <th style="padding: 8px; width: 50%;">Residue</th>
@@ -262,24 +352,36 @@
                     </div>
                 </div>
 
-                <div id="rinpy-results-container" class="viewer-container" style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
+                <div id="rinpy-results-container" class="viewer-container"
+                    style="display: none; width: 100%; min-height: 200px; margin-top: 24px;">
                     <div class="viewer-header">
                         <span style="font-weight: 600;">RinPy Results</span>
-                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Top centrality metrics and hinge residues detected by Elastic Network Model. <span style="color: #ff6b6b; font-weight: 600;">Hinge residues</span> are defined as the mechanical joints of the protein, behaving as centers of low mobility that connect relatively rigid regions, being critical for orchestrating large-scale conformational changes.</div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">
+                            Top centrality metrics and hinge residues detected by Elastic Network Model. <span
+                                style="color: #ff6b6b; font-weight: 600;">Hinge residues</span> are defined as the
+                            mechanical joints of the protein, behaving as centers of low mobility that connect
+                            relatively rigid regions, being critical for orchestrating large-scale conformational
+                            changes.</div>
                     </div>
                     <div style="padding: 16px;">
-                        <div class="metrics-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; overflow-x: auto;"></div>
+                        <div class="metrics-tabs"
+                            style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; overflow-x: auto;">
+                        </div>
                         <div class="metrics-content"></div>
                     </div>
                 </div>
-                
-                <div id="interchain-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
-                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+
+                <div id="interchain-container" class="viewer-container"
+                    style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header"
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <span>Inter-chain Interactions</span>
-                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Connections between residues of distinct chains</div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Connections
+                            between residues of distinct chains</div>
                     </div>
                     <div style="overflow-y: auto; max-height: 300px; padding: 16px;">
-                        <table id="interchain-table" style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
+                        <table id="interchain-table"
+                            style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--panel-border); color: var(--text-muted);">
                                     <th style="padding: 8px;">Node 1</th>
@@ -293,19 +395,24 @@
                                 <!-- Interchain rows will be dynamically injected here -->
                             </tbody>
                         </table>
-                        <div id="no-interchain-msg" style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                        <div id="no-interchain-msg"
+                            style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
                             No inter-chain interactions detected.
                         </div>
                     </div>
                 </div>
-                
-                <div id="ligand-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
-                    <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+
+                <div id="ligand-container" class="viewer-container"
+                    style="display: none; width: 100%; margin-top: 24px;">
+                    <div class="viewer-header"
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <span>Ligand Interactions</span>
-                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Interactions involving non-standard residues (ligands)</div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Interactions
+                            involving non-standard residues (ligands)</div>
                     </div>
                     <div style="overflow-y: auto; max-height: 300px; padding: 16px;">
-                        <table id="ligand-table" style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
+                        <table id="ligand-table"
+                            style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.85rem;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--panel-border); color: var(--text-muted);">
                                     <th style="padding: 8px;">Ligand Node</th>
@@ -319,58 +426,87 @@
                                 <!-- Ligand rows will be dynamically injected here -->
                             </tbody>
                         </table>
-                        <div id="no-ligand-msg" style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                        <div id="no-ligand-msg"
+                            style="display: none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
                             No ligand interactions detected.
                         </div>
                     </div>
                 </div>
-                
-                <div id="complexity-analysis-container" class="viewer-container" style="display: none; width: 100%; margin-top: 24px;">
+
+                <div id="complexity-analysis-container" class="viewer-container"
+                    style="display: none; width: 100%; margin-top: 24px;">
                     <div class="viewer-header">
                         <span style="font-weight: 600;">Network Complexity Analysis</span>
-                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">Provides metrics for the calculated network to help assess its complexity.</div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted); margin-top: 4px;">
+                            Provides metrics for the calculated network to help assess its complexity.</div>
                     </div>
                     <div style="padding: 16px;">
                         <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Nodes</div>
-                                <div id="metric-nodes" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Nodes
+                                </div>
+                                <div id="metric-nodes"
+                                    style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
                             </div>
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Edges</div>
-                                <div id="metric-edges" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Edges
+                                </div>
+                                <div id="metric-edges"
+                                    style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0</div>
                             </div>
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Density</div>
-                                <div id="metric-density" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Density
+                                </div>
+                                <div id="metric-density"
+                                    style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000
+                                </div>
                             </div>
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg. Clustering</div>
-                                <div id="metric-clustering" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg.
+                                    Clustering</div>
+                                <div id="metric-clustering"
+                                    style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000
+                                </div>
                             </div>
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg. Shortest Path</div>
-                                <div id="metric-path" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Avg.
+                                    Shortest Path</div>
+                                <div id="metric-path"
+                                    style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">0.0000
+                                </div>
                             </div>
-                            <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Network Type</div>
-                                <div id="metric-class" style="font-size: 1.2rem; font-weight: 600; color: var(--accent-color);">Calculating...</div>
+                            <div
+                                style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Network
+                                    Type</div>
+                                <div id="metric-class"
+                                    style="font-size: 1.2rem; font-weight: 600; color: var(--accent-color);">
+                                    Calculating...</div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 24px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 300px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                     <div style="font-weight: 600;">Degree Distribution (Bar)</div>
-                                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
+                                    <label
+                                        style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
                                         <input type="checkbox" id="log-bar-chk"> Log-Log
                                     </label>
                                 </div>
                                 <div id="degree-bar-plot" style="width: 100%; height: 350px;"></div>
                             </div>
                             <div style="flex: 1; min-width: 300px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                     <div style="font-weight: 600;">Degree Distribution (Scatter)</div>
-                                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
+                                    <label
+                                        style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
                                         <input type="checkbox" id="log-scatter-chk"> Log-Log
                                     </label>
                                 </div>
@@ -381,8 +517,14 @@
                 </div>
             </div>
         </main>
+
+        <div id="documentation-view" class="documentation-view" style="display: none;">
+            <div id="doc-content" class="doc-content">
+                <div class="doc-loading">Loading documentation…</div>
+            </div>
+        </div>
     </div>
-    
+
     <footer class="app-footer">
         <a href="http://evomol-lab.imd.ufrn.br" target="_blank" rel="noopener noreferrer">
             <img src="{{ url_for('static', filename='EvoMol-logo.png') }}" alt="EvoMol Lab Logo" class="footer-logo">
@@ -392,4 +534,5 @@
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

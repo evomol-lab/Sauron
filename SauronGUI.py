@@ -16,9 +16,21 @@ else:
 UPLOAD_FOLDER = os.environ.get('SAURON_UPLOAD_DIR', os.path.abspath('uploads'))
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Project root: where DOCUMENTATION.md lives, both in a normal checkout and inside
+# a PyInstaller-frozen build (see SauronGUI.spec, which bundles it alongside
+# templates/ and static/).
+APP_ROOT = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/documentation')
+def documentation():
+    path = os.path.join(APP_ROOT, 'DOCUMENTATION.md')
+    if os.path.exists(path):
+        return send_file(path, mimetype='text/markdown')
+    return "Documentation not found", 404
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -64,6 +76,7 @@ def upload():
     chains_input = request.form.get('chains_input')
     calc_energy = request.form.get('calc_energy') == 'true'
     vdw_energy = request.form.get('vdw_energy') == 'true'
+    water_bridges = request.form.get('water_bridges') == 'true'
     
     # Clear previous output files in UPLOAD_FOLDER
     for ext in ["*.edges", "*.nodes", "*.tsv", "*.zip", "*.log", "*_degree.pdb"]:
@@ -88,6 +101,7 @@ def upload():
     if remove_multiples: cmd.append('--remove-multiples')
     if calc_energy: cmd.append('--energy')
     if vdw_energy: cmd.append('--vdw-energy')
+    if water_bridges: cmd.append('--water-bridges')
     if chains_opt == 'specific' and chains_input and chains_input.strip():
         cmd.extend(['--chains', chains_input.strip().upper()])
     

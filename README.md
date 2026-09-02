@@ -16,9 +16,10 @@ Developed by the EvoMol-lab Team, BioMe, UFRN.
 
 ## Features
 
-- **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, and VDW interactions.
+- **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, VDW, METAL coordination, HALOGEN bonds, PIHBOND (π-hydrogen), and (opt-in) water-mediated bridges. See [DOCUMENTATION.md](DOCUMENTATION.md#interaction-types-and-geometric-definitions) for the exact geometric definition of each.
+- **Validated Against RING**: Interaction definitions were checked edge-by-edge against real [RING](https://ring.biocomputingup.it/) output on both X-ray and NMR-ensemble structures — see [DOCUMENTATION.md](DOCUMENTATION.md#validation-against-ring).
 - **Topological Metrics**: Automatically computes network properties including Degree, Clustering Coefficient, Betweenness Centrality, and Eigenvector Centrality.
-- **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar). The structural viewer dynamically adapts its background to the UI's Light/Dark mode.
+- **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar) *and* the primary-sequence bar — selecting a residue in any one of them highlights it in all the others. The structural viewer dynamically adapts its background to the UI's Light/Dark mode.
 - **Direct Database Fetching**: Instantly calculate networks by providing an RCSB PDB ID or an AlphaFold UniProt ID.
 - **Versatile Calculation Methods**: 
   - *Standard*: A fast and strictly constrained distance/angle algorithm.
@@ -69,6 +70,11 @@ python sauron.py <input_file> [options]
 - `--strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°).
 - `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.
 - `--chains`: Comma-separated list of chains to calculate (e.g., A,B,C).
+- `--water-bridges`: Detect `WATERBRIDGE` edges between residues sharing a crystallographic water. This is a Sauron-specific extension with no equivalent RING interaction type, so it's off by default.
+- `--energy`: Compute a per-edge electrostatic interaction energy. Requires `--add-h` or an already charge-annotated (PQR) input.
+- `--vdw-energy`: With `--energy`, also add a generic Lennard-Jones term to the energy (electrostatics only otherwise).
+
+See [DOCUMENTATION.md](DOCUMENTATION.md#command-line-interface-sauronpy) for the full option reference, including what each `--calc-method` does.
 
 **Example:**
 ```bash
@@ -138,7 +144,7 @@ If you use Sauron in your research, please cite the Sauron's GitHub repository. 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) - see the [LICENSE](LICENSE) file for details. In short: free to use, modify, and redistribute for any noncommercial purpose (research, education, personal projects); commercial use requires a separate agreement with the authors.
 
 <div align="center">
   <img src="EvoMol_v2.png" alt="EvoMol Logo" width="400">

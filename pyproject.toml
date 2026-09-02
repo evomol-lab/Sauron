@@ -1,0 +1,30 @@
+[project]
+name = "sauron"
+version = "0.1.0"
+description = "Sauron: Residue Interaction Networks and Molecular Analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "biopython>=1.84",
+    "docutils>=0.17.1",
+    "einops>=0.8.0",
+    "flask>=3.0.0",
+    "mmcif-pdbx>=2.1.0",
+    "networkx>=3.0",
+    "numpy>=2.0.0",
+    "pandas>=2.0.0",
+    "pdb2pqr>=3.6.0",
+    "plotly>=5.0.0",
+    "prody>=2.4.1",
+    "propka>=3.5.1",
+    "pydssp>=0.9.1",
+    "requests>=2.31.0",
+    "rinpy>=0.2.5",
+    "scipy>=1.14.0",
+    "sympy>=1.13.0",
+    "torch>=2.0.0",
+    "tqdm>=4.66.0",
+]
+
+[tool.uv]
+package = false

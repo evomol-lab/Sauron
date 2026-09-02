@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('templates', 'templates'), ('static', 'static')]
+datas = [('templates', 'templates'), ('static', 'static'), ('DOCUMENTATION.md', '.')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('pdb2pqr')
