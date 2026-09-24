@@ -66,19 +66,19 @@ python sauron.py <input_file> [options]
 
 **Options:**
 - `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, `insty`, or `rinpy`). Default is `standard`.
-- `--add-h`: Add explicit hydrogens using `pdb2pqr` prior to calculations (Highly recommended for `insty` runs).
-- `--strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°).
-- `--remove-multiples`: Remove multiple interactions of the same type between the same residue pair.
+- `--add-h` / `--no-add-h`: Add explicit hydrogens using `pdb2pqr` prior to calculations. **On by default** (same as the web interface), because strict angle checking and `insty` runs need explicit hydrogens.
+- `--strict-angle` / `--no-strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°). **On by default** (same as the web interface). Requires explicit hydrogens, which `--add-h` provides by default.
+- `--remove-multiples` / `--no-remove-multiples`: Remove multiple interactions of the same type between the same residue pair. **On by default** (same as the web interface).
 - `--chains`: Comma-separated list of chains to calculate (e.g., A,B,C).
 - `--water-bridges`: Detect `WATERBRIDGE` edges between residues sharing a crystallographic water. This is a Sauron-specific extension with no equivalent RING interaction type, so it's off by default.
-- `--energy`: Compute a per-edge electrostatic interaction energy. Requires `--add-h` or an already charge-annotated (PQR) input.
+- `--energy`: Compute a per-edge electrostatic interaction energy. Requires hydrogen addition (on by default) or an already charge-annotated (PQR) input.
 - `--vdw-energy`: With `--energy`, also add a generic Lennard-Jones term to the energy (electrostatics only otherwise).
 
 See [DOCUMENTATION.md](DOCUMENTATION.md#command-line-interface-sauronpy) for the full option reference, including what each `--calc-method` does.
 
 **Example:**
 ```bash
-python sauron.py 1AFW.pdb --add-h --strict-angle --remove-multiples --chains A
+python sauron.py 1AFW.pdb --chains A
 ```
 
 ### 2. Web Interface

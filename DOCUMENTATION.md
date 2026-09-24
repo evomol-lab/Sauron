@@ -72,9 +72,9 @@ ensembles) are processed model by model; see [Output Files](#output-files).
 | Flag | Description |
 |---|---|
 | `--calc-method {standard,voronoi,insty,rinpy}` | Interaction-calculation methodology. Default: `standard`. See below. |
-| `--add-h` | Add explicit hydrogens with `pdb2pqr` (force field `PARSE`) before computing interactions. No-op (with a fallback warning) if `pdb2pqr` is unavailable. Strongly recommended for `--calc-method insty`, and required for `--strict-angle` / `--energy` to have any effect on a structure that doesn't already carry hydrogens (e.g. most X-ray depositions; NMR ensembles usually already have them). |
-| `--strict-angle` | Enforce a real donor–H···acceptor angle (> 120°) for `HBOND` edges, using explicit hydrogens already present in the structure (native or added via `--add-h`). Without this flag, `HBOND` edges use a fixed placeholder `Angle` of `150.000` and are accepted on distance alone. If no hydrogens are present at all, every candidate is rejected (no false positives, but also no `HBOND` edges) — use `--add-h` together with this flag on H-less inputs. |
-| `--remove-multiples` | Collapse duplicate edges of the *same type* between the same residue pair down to the single shortest-distance one. Multiple edges of *different* types on the same pair (e.g. an `HBOND` and a separate `VDW` contact) are unaffected. |
+| `--add-h` / `--no-add-h` | **On by default** (matching the GUI, which always adds hydrogens); disable with `--no-add-h`. Add explicit hydrogens with `pdb2pqr` (force field `PARSE`) before computing interactions. No-op (with a fallback warning) if `pdb2pqr` is unavailable. Strongly recommended for `--calc-method insty`, and required for `--strict-angle` / `--energy` to have any effect on a structure that doesn't already carry hydrogens (e.g. most X-ray depositions; NMR ensembles usually already have them). |
+| `--strict-angle` / `--no-strict-angle` | **On by default** (matching the GUI); disable with `--no-strict-angle`. Enforce a real donor–H···acceptor angle (> 120°) for `HBOND` edges, using explicit hydrogens already present in the structure (native or added via `--add-h`). When disabled, `HBOND` edges use a fixed placeholder `Angle` of `150.000` and are accepted on distance alone. If no hydrogens are present at all, every candidate is rejected (no false positives, but also no `HBOND` edges) — use `--add-h` on H-less inputs, or pass `--no-strict-angle`. |
+| `--remove-multiples` / `--no-remove-multiples` | **On by default** (matching the GUI); disable with `--no-remove-multiples`. Collapse duplicate edges of the *same type* between the same residue pair down to the single shortest-distance one. Multiple edges of *different* types on the same pair (e.g. an `HBOND` and a separate `VDW` contact) are unaffected. |
 | `--chains A,B,C` | Restrict the calculation to the given chain(s) (comma-separated, case-sensitive to match the file). Default: all chains. |
 | `--energy` | Compute a per-edge electrostatic interaction energy (`Energy` column, kcal/mol, Coulomb's law with a distance-dependent dielectric: `332.0637·q1·q2/(4·r²)`) using atomic partial charges/radii from a PQR file. Requires either `--add-h` (which produces a PQR as a side effect) or an already-charge-annotated input. Without `--energy`, `Energy` is always `nan`. |
 | `--vdw-energy` | With `--energy`, also add a generic Lennard-Jones term (using the PQR radii) to `Energy`. Without it, `--energy` reports electrostatics only. No effect without `--energy`. |
@@ -110,11 +110,14 @@ ensembles) are processed model by model; see [Output Files](#output-files).
 ### Examples
 
 ```bash
-# Default RIN, strict H-bond geometry, one edge per type per residue pair
-python sauron.py 1AFW.pdb --strict-angle --remove-multiples
+# Default RIN (hydrogen addition, strict H-bond geometry and one edge per type per residue pair are on by default)
+python sauron.py 1AFW.pdb
 
-# Add hydrogens first, compute electrostatic + VDW energy per edge, chains A and B only
-python sauron.py 1AFW.pdb --add-h --energy --vdw-energy --chains A,B
+# Legacy behaviour: no added hydrogens, distance-only H-bonds, keep duplicate edges
+python sauron.py 1AFW.pdb --no-add-h --no-strict-angle --no-remove-multiples
+
+# Compute electrostatic + VDW energy per edge (hydrogens are added by default), chains A and B only
+python sauron.py 1AFW.pdb --energy --vdw-energy --chains A,B
 
 # Include Sauron's water-bridge extension
 python sauron.py 4AKE.cif --water-bridges
@@ -144,7 +147,7 @@ types report at most one edge (`SSBOND`, `IONIC`, `PIPISTACK`, `PICATION`,
 only their single best/first-qualifying atom pair); `HBOND` and `WATERBRIDGE` are
 the exceptions and can report one edge per qualifying atom pair (e.g. two
 side-chain acceptors each hydrogen-bonding to the same donor produce two `HBOND`
-rows) — use `--remove-multiples` to collapse those down to one per type per pair.
+rows) — `--remove-multiples` (on by default) collapses those down to one per type per pair.
 
 | Type | Criterion | Notes |
 |---|---|---|
@@ -242,7 +245,9 @@ toggles: calculation method, chain selection (all vs. a specific comma-separated
 list), Protein Energy Network (`--energy`, with a nested van der Waals sub-toggle
 for `--vdw-energy`), and Water Bridges (`--water-bridges`, hidden automatically for
 methods that don't support it). `--strict-angle` and `--remove-multiples` are
-always enforced by the GUI backend (not exposed as toggles).
+always enforced by the GUI backend (not exposed as toggles), and are also the
+defaults of `sauron.py`. The GUI also always adds explicit hydrogens with `pdb2pqr`
+(`--add-h`, likewise the `sauron.py` default).
 
 ### Interactive dashboard
 

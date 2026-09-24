@@ -255,17 +255,52 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
             import warnings
             import re
             warnings.filterwarnings('ignore')
-            prody_atoms = prody.parsePQR(pqr_file) if pqr_file and pqr_file.endswith('.pqr') else prody.parsePDB(pqr_file)
+            # ProDy's interaction code selects residues with strings like
+            # "resid N and chain X", which breaks on crystal numbering: negative
+            # residue numbers are parsed as a subtraction (crash) and insertion
+            # codes (e.g. 58, 58A, 58B) get merged (crash or mixed-up edges).
+            # ProDy's whitespace-based PQR reader also garbles residue numbers
+            # that carry an insertion code. So ProDy gets its own PDB file, written
+            # from the structure Sauron already parsed (hydrogens included), with
+            # residues renumbered 1..N per chain and no insertion codes. Every
+            # ProDy residue is then mapped back to its original node id.
+            import tempfile
+            prody_node_map = {}
+            pdb_lines = []
+            serial = 0
+            for chain in structure:
+                counter = 0
+                for residue in chain:
+                    counter += 1
+                    prody_node_map[(chain.id, counter)] = format_node_id(residue)
+                    record = "ATOM  " if residue.id[0] == ' ' else "HETATM"
+                    for atom in residue:
+                        serial += 1
+                        x, y, z = atom.coord
+                        element = (getattr(atom, 'element', '') or '').strip()
+                        pdb_lines.append("%-6s%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n" % (
+                            record, serial % 100000, atom.get_fullname()[:4], residue.resname[:3], chain.id[:1],
+                            counter, x, y, z, 1.0, 0.0, element[:2]))
+            pdb_lines.append("END\n")
+            prody_tmp = tempfile.NamedTemporaryFile('w', suffix='.pdb', delete=False)
+            prody_tmp.writelines(pdb_lines)
+            prody_tmp.close()
+            try:
+                prody_atoms = prody.parsePDB(prody_tmp.name)
+            finally:
+                os.remove(prody_tmp.name)
             if not prody_atoms:
                 raise ValueError("ProDy failed to parse structure.")
+
             res = prody.calcProteinInteractions(prody_atoms)
             
             def parse_prody_node(res_str, chid):
                 m = re.match(r'^(.*?)(\-?\d+)$', res_str)
                 if not m: return None, None, None
                 resname = m.group(1)
-                pos = m.group(2)
-                return f"{chid}:{pos}:_:{resname}", resname, pos
+                node_id = prody_node_map.get((chid, int(m.group(2))))
+                if node_id is None: return None, None, None
+                return node_id, resname, node_id.split(':')[1]
 
             def add_edge(n1, n2, interaction, dist, angle, a1='', a2='', energy='nan'):
                 if n1 > n2: n1, n2 = n2, n1
@@ -326,17 +361,17 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                         add_edge(n1, n2, 'SSBOND:SC_SC', ss[6], 'nan', 'SG', 'SG')
             
             try:
-                wb_res = prody.calcWaterBridges(prody_atoms)
+                # Only when requested, like the other methods (--water-bridges is off by default).
+                wb_res = prody.calcWaterBridges(prody_atoms) if water_bridges else []
                 for bridge in wb_res:
                     if hasattr(bridge, 'proteins') and len(bridge.proteins) == 2:
                         a1, a2 = bridge.proteins
-                        n1 = f"{a1.getChid()}:{a1.getResnum()}:_:{a1.getResname()}"
-                        n2 = f"{a2.getChid()}:{a2.getResnum()}:_:{a2.getResname()}"
+                        n1 = prody_node_map.get((a1.getChid(), int(a1.getResnum())))
+                        n2 = prody_node_map.get((a2.getChid(), int(a2.getResnum())))
+                        if not n1 or not n2: continue
                         dist = np.linalg.norm(a1.getCoords() - a2.getCoords())
                         ctype = get_prody_contact_type(a1.getName(), a2.getName())
                         add_edge(n1, n2, f'WATERBRIDGE:{ctype}', dist, 'nan', a1.getName(), a2.getName())
-                        # add nodes
-                        nodes.add(orig_struct[0][a1.getChid()][(' ', a1.getResnum(), ' ')]) # Approximation, actual node adding is handled below
             except Exception as e:
                 pass
             
@@ -851,9 +886,12 @@ def analyze_network(edges_df, nodes_df, prefix):
 def main():
     parser = argparse.ArgumentParser(description="Calculate RIN using RING 4.0 thresholds")
     parser.add_argument("input", help="Input PDB or CIF file")
-    parser.add_argument("--add-h", action="store_true", help="Add hydrogens using pdb2pqr")
-    parser.add_argument("--strict-angle", action="store_true", help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg)")
-    parser.add_argument("--remove-multiples", action="store_true", help="Remove multiple interactions of the same type between the same residue pair")
+    # On by default to stay in sync with SauronGUI.py, which always adds hydrogens:
+    # --strict-angle (also on by default) rejects every HBOND without explicit hydrogens.
+    parser.add_argument("--add-h", action=argparse.BooleanOptionalAction, default=True, help="Add hydrogens using pdb2pqr. On by default; use --no-add-h to disable (note that --strict-angle then keeps almost no HBOND edges on structures without hydrogens)")
+    # On by default to stay in sync with SauronGUI.py, which always enforces both.
+    parser.add_argument("--strict-angle", action=argparse.BooleanOptionalAction, default=True, help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg). On by default; use --no-strict-angle to disable. Needs explicit hydrogens (native or via --add-h), otherwise no HBOND edges are kept")
+    parser.add_argument("--remove-multiples", action=argparse.BooleanOptionalAction, default=True, help="Remove multiple interactions of the same type between the same residue pair. On by default; use --no-remove-multiples to disable")
     parser.add_argument("--calc-method", choices=["standard", "voronoi", "insty", "rinpy"], default="standard", help="Method for RIN calculation")
     parser.add_argument("--chains", type=str, help="Comma-separated list of chains to calculate (e.g. A,B,C)")
     parser.add_argument("--energy", action="store_true", help="Calculate Interaction Energy (PENs). Requires a PQR file or --add-h.")

@@ -94,8 +94,9 @@ def upload():
     else:
         cmd = [sys.executable, os.path.abspath(__file__), "--run-sauron", filename]
 
-    if calc_energy or calc_method == 'insty':
-        cmd.append('--add-h')
+    # Always add explicit hydrogens: strict_angle (always on) rejects every HBOND
+    # on a structure without hydrogens, and PEN / ProDy InSty need them too.
+    cmd.append('--add-h')
     cmd.extend(['--calc-method', calc_method])
     if strict_angle: cmd.append('--strict-angle')
     if remove_multiples: cmd.append('--remove-multiples')
