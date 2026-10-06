@@ -119,13 +119,27 @@
                         </div>
                         <select id="calc_method" name="calc_method"
                             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 1rem; font-family: inherit; cursor: pointer; outline: none;">
-                            <option value="standard" style="background: #111111; color: #E0E0E0;">Standard (Distance
-                                cutoffs)</option>
-                            <option value="voronoi" style="background: #111111; color: #E0E0E0;">Voronoi Tessellation
-                            </option>
+                            <option value="sauron" style="background: #111111; color: #E0E0E0;" selected>Sauron (geometric
+                                criteria)</option>
                             <option value="insty" style="background: #111111; color: #E0E0E0;">ProDy InSty</option>
                             <option value="rinpy" style="background: #111111; color: #E0E0E0;">RinPy (Elastic Network
                                 Model)</option>
+                        </select>
+                    </div>
+
+                    <div id="vdw-contacts-container" style="margin-bottom: 16px;">
+                        <div class="toggle-info" style="margin-bottom: 8px;">
+                            <span class="toggle-title">Van der Waals Contacts</span>
+                            <span class="toggle-desc">Which contact classes count as VDW edges (MolProbity all-atom
+                                contacts, Word et al. 1999). Overlaps of 0.4 Å or more are steric clashes in both
+                                modes.</span>
+                        </div>
+                        <select id="vdw_contacts" name="vdw_contacts"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 1rem; font-family: inherit; cursor: pointer; outline: none;">
+                            <option value="close" style="background: #111111; color: #E0E0E0;" selected>Close contacts
+                                (surfaces ≤ 0.25 Å apart, default)</option>
+                            <option value="wide" style="background: #111111; color: #E0E0E0;">Close + wide contacts
+                                (surfaces ≤ 0.5 Å apart)</option>
                         </select>
                     </div>
 
@@ -134,8 +148,9 @@
                     <label class="toggle-switch" id="pen-container">
                         <div class="toggle-info">
                             <span class="toggle-title">Protein Energy Network (PEN)</span>
-                            <span class="toggle-desc">Calculate interaction energies (Electrostatics). Requires
-                                computing partial charges (PDB2PQR).</span>
+                            <span class="toggle-desc">Residue–residue interaction energy on every edge (kcal/mol),
+                                summed over all atom pairs of the two residues: Coulomb with PDB2PQR partial charges
+                                and a distance-dependent dielectric (4r).</span>
                         </div>
                         <input type="checkbox" id="calc_energy" name="calc_energy">
                         <span class="slider"></span>
@@ -145,8 +160,9 @@
                         style="display: none; margin-top: 10px; margin-left: 20px; border-left: 2px solid var(--panel-border); padding-left: 10px;">
                         <div class="toggle-info">
                             <span class="toggle-title">Include van der Waals</span>
-                            <span class="toggle-desc">Add generic Lennard-Jones terms to the total energy. If disabled,
-                                only Electrostatics is computed.</span>
+                            <span class="toggle-desc">Add a generic 12-6 Lennard-Jones term (well depth 0.1 kcal/mol,
+                                Bondi radii; polar hydrogens excluded). If disabled, only electrostatics is
+                                computed.</span>
                         </div>
                         <input type="checkbox" id="vdw_energy" name="vdw_energy">
                         <span class="slider"></span>
@@ -206,6 +222,10 @@
                             } else {
                                 waterBridgeContainer.style.display = 'flex';
                             }
+                            // The VDW contact window is Sauron's own criterion: it does
+                            // not apply to ProDy's interaction set nor to RinPy.
+                            document.getElementById('vdw-contacts-container').style.display =
+                                (e.target.value === 'insty' || e.target.value === 'rinpy') ? 'none' : 'block';
                         });
                     </script>
 
@@ -248,6 +268,7 @@
                 </svg>
                 <h3>Calculation Complete</h3>
                 <p>Your network topology has been mapped successfully.</p>
+                <p id="clash-note" style="display: none; font-size: 0.9rem; color: var(--text-muted);"></p>
                 <div class="success-actions">
                     <a id="download-btn" class="download-btn" href="#">Download Results (.zip)</a>
                     <button id="reset-btn" class="reset-btn">Calculate Another</button>
@@ -316,6 +337,7 @@
                                     <th style="padding: 8px;">Interaction Type</th>
                                     <th style="padding: 8px;">Distance (Å)</th>
                                     <th style="padding: 8px;">Angle (°)</th>
+                                    <th style="padding: 8px;">Energy (kcal/mol)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -389,6 +411,7 @@
                                     <th style="padding: 8px;">Interaction</th>
                                     <th style="padding: 8px;">Distance</th>
                                     <th style="padding: 8px;">Angle</th>
+                                    <th style="padding: 8px;">Energy</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -420,6 +443,7 @@
                                     <th style="padding: 8px;">Interaction</th>
                                     <th style="padding: 8px;">Distance</th>
                                     <th style="padding: 8px;">Angle</th>
+                                    <th style="padding: 8px;">Energy</th>
                                 </tr>
                             </thead>
                             <tbody>

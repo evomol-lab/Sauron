@@ -34,6 +34,41 @@ DEFAULT_METAL_DIST = 3.0
 
 MC_ATOMS = {'N', 'CA', 'C', 'O', 'OXT'}
 
+# Van der Waals contact classes follow the all-atom contact analysis of Word et
+# al. (1999, J. Mol. Biol. 285:1735), used by MolProbity/Probe: by the gap
+# between the two vdW surfaces, "close contact" (0 < gap <= 0.25 A), "wide
+# contact" (0.25 < gap <= 0.5 A), "small overlap" (overlap < 0.4 A) and "bad
+# overlap" (overlap >= 0.4 A). A VDW edge needs a close contact or a small
+# overlap (--vdw-contacts close, the default) or, optionally, also accepts wide
+# contacts (--vdw-contacts wide). A bad overlap is a steric clash (Chen et al.
+# 2010, Acta Cryst. D66:12) - a structural defect, not an interaction - so it
+# is reported separately and never counted as a VDW edge. Radii are Bondi
+# (1964), see VDW_RADII.
+VDW_CONTACT_MAX_GAP = {'close': 0.25, 'wide': 0.5}
+DEFAULT_VDW_CONTACTS = 'close'
+CLASH_MIN_OVERLAP = 0.4
+# Heavy atoms of different residues closer than this are covalently linked
+# (glycosylation, covalent inhibitors, cross-links), not in non-bonded contact.
+COVALENT_LINK_MAX = 2.2
+
+# Halogen bonds are directional: the C-X...A angle is close to linear (~165 deg)
+# and X...A is shorter than the sum of vdW radii (Auffinger et al. 2004, PNAS
+# 101:16789; IUPAC definition, Desiraju et al. 2013, Pure Appl. Chem. 85:1711).
+HALOGEN_MIN_ANGLE = 140.0
+
+# X-H...pi hydrogen bonds: the donor's hydrogen points at the aromatic ring
+# (Steiner & Koellner 2001, J. Mol. Biol. 305:535).
+PIHBOND_MAX_H_CENTROID = 3.0
+PIHBOND_MIN_ANGLE = 120.0
+# Legacy heavy-atom-only criterion, used only when hydrogen geometry is not checked.
+PIHBOND_MAX_DONOR_CENTROID = 4.0
+
+# Residue-residue interaction energy (--energy): Coulomb with a distance-dependent
+# dielectric eps(r) = 4r and PQR partial charges, plus (--vdw-energy) a generic
+# 12-6 Lennard-Jones term with a uniform well depth and r_min = sum of Bondi radii.
+COULOMB_CONSTANT = 332.0637  # kcal*A/(mol*e^2)
+LJ_WELL_DEPTH = 0.1          # kcal/mol, generic
+
 # Two-letter element symbols that commonly appear in PDB/PQR atom names (metals and
 # halogens). Used to disambiguate atom names like "CA" (alpha-carbon vs. calcium ion)
 # or "CL"/"NA" when the file's own element column is missing or was stripped (e.g.
@@ -63,8 +98,8 @@ def get_metal_coord_dist(element):
 # Hydrogen-bond donor/acceptor atom roles for the 20 standard amino acids. A blanket
 # "any N/O/S near any N/O/S" test (the previous behaviour) also matches chemically
 # impossible pairs such as two backbone carbonyl oxygens or two amide nitrogens -
-# neither of which can hydrogen-bond to its own kind - which was the single largest
-# source of over-counted HBOND edges relative to RING.
+# neither of which can hydrogen-bond to its own kind. Roles follow standard
+# amino-acid chemistry (e.g. Baker & Hubbard 1984; McDonald & Thornton 1994).
 STANDARD_AA = {
     'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
     'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL'
@@ -167,20 +202,55 @@ def get_attached_hydrogens(atom):
                 hydrogens.append(a)
     return hydrogens
 
-def check_hbond_angle(a1, a2):
-    # Check if a1 is donor
-    h1 = get_attached_hydrogens(a1)
-    for h in h1:
-        angle = calc_angle(a1.coord, h.coord, a2.coord)
-        if angle > 120: return True, angle
-    
-    # Check if a2 is donor
-    h2 = get_attached_hydrogens(a2)
-    for h in h2:
-        angle = calc_angle(a2.coord, h.coord, a1.coord)
-        if angle > 120: return True, angle
-        
-    return False, np.nan
+def check_hbond_angle(donor, acceptor):
+    """Best donor-H...acceptor angle over the donor's own hydrogens; valid if > 120 deg.
+    Only the donor's hydrogens are tried: testing the acceptor's hydrogens as well
+    (the previous behaviour) accepted bonds in the reverse direction even when the
+    other atom cannot act as an acceptor (e.g. a backbone N)."""
+    best = np.nan
+    for h in get_attached_hydrogens(donor):
+        angle = calc_angle(donor.coord, h.coord, acceptor.coord)
+        if np.isnan(best) or angle > best:
+            best = angle
+    if not np.isnan(best) and best > 120:
+        return True, best
+    return False, best
+
+def polar_hydrogen_parent(atom):
+    """The N/O/S atom a hydrogen is bonded to, or None (non-hydrogen, or C-H)."""
+    if get_element(atom) != 'H':
+        return None
+    for a in atom.parent:
+        if a is not atom and get_element(a) in ('N', 'O', 'S') and np.linalg.norm(a.coord - atom.coord) < 1.3:
+            return a
+    return None
+
+def load_pqr_parameters(model, pqr_file):
+    """Attach PQR partial charge and radius to each atom (atom.xtra['charge'],
+    atom.xtra['pqr_radius']) and return how many atoms were matched.
+
+    PQR's charge and radius are whitespace-delimited and wider than the PDB
+    occupancy/B-factor columns, so reading them through PDBParser truncates the
+    charges and loses most radii; they are read from the file directly instead."""
+    params = {}
+    with open(pqr_file) as f:
+        for line in f:
+            if not line.startswith(('ATOM', 'HETATM')):
+                continue
+            fields = line.split()
+            try:
+                key = (line[21], int(line[22:26]), line[26].strip(), line[12:16].strip())
+                params[key] = (float(fields[-2]), float(fields[-1]))
+            except (ValueError, IndexError):
+                continue
+    matched = 0
+    for atom in model.get_atoms():
+        res = atom.parent
+        key = (res.parent.id, res.id[1], res.id[2].strip(), atom.get_id())
+        if key in params:
+            atom.xtra['charge'], atom.xtra['pqr_radius'] = params[key]
+            matched += 1
+    return matched
 
 def add_hydrogens(input_file):
     output_file = input_file + ".pqr"
@@ -208,46 +278,63 @@ def parse_structure(filepath):
         parser = PDBParser(QUIET=True)
     return parser.get_structure('struct', filepath)
 
-def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1, calc_method="standard", pqr_file=None, calc_energy=False, include_vdw=False, water_bridges=False):
-    def calc_energy_terms(a1, a2):
-        if not calc_energy: return 'nan'
-        try:
-            q1 = getattr(a1, 'occupancy', 0.0) or 0.0
-            q2 = getattr(a2, 'occupancy', 0.0) or 0.0
-            r1 = getattr(a1, 'bfactor', 0.0) or 0.0
-            r2 = getattr(a2, 'bfactor', 0.0) or 0.0
-            dist = np.linalg.norm(a1.getCoords() if hasattr(a1, 'getCoords') else a1.coord - (a2.getCoords() if hasattr(a2, 'getCoords') else a2.coord))
-            if dist == 0: return 0.0
-            e_elec = 332.0637 * q1 * q2 / (4.0 * dist * dist)
-            e_vdw = 0.0
-            if include_vdw and r1 > 0 and r2 > 0:
-                ratio = (r1 + r2) / dist
-                ratio6 = ratio**6
-                e_vdw = 0.1 * (ratio6**2 - 2 * ratio6)
-            return e_elec + e_vdw
-        except:
-            return 'nan'
-
+def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_num=1, calc_method="sauron", pqr_file=None, calc_energy=False, include_vdw=False, water_bridges=False, vdw_contacts=DEFAULT_VDW_CONTACTS):
     edges = []
     nodes = set()
-    
-    atoms = list(structure.get_atoms())
+    clashes = []
+    vdw_max_gap = VDW_CONTACT_MAX_GAP[vdw_contacts]
 
-    # The +0.5 A VDW tolerance below is meant to compensate for a heavy-atom-only
-    # structure's *missing* hydrogens (an implicit H's own reach isn't otherwise
-    # accounted for). When the structure already carries explicit hydrogens (NMR
-    # ensembles, or after --add-h), that compensation is no longer needed and just
-    # widens the net on top of already-real atoms - verified against a 20-model NMR
-    # ensemble (2N8N) with reference RING output: at the default 0.5 A tolerance,
-    # Sauron called a VDW contact on 97 residue pairs in one representative model
-    # vs RING's 42; dropping to a small residual (thermal-motion-only) tolerance
-    # once hydrogens are present brings that back in line.
+    atoms = list(structure.get_atoms())
+    # Whether hydrogen positions are available to check H-bond / X-H...pi geometry.
     has_explicit_h = any(get_element(a) == 'H' for a in atoms)
-    # With explicit hydrogens, the classic "sum of vdW radii" touching-distance
-    # definition (no added slack) already matches RING closely - empirically tuned
-    # against the 2N8N ensemble (VDW ratio dropped from 1.73x at +0.5 A to ~1.1x at
-    # +0.0 A; more negative isn't a physically meaningful "contact" anymore).
-    VDW_TOLERANCE = 0.0 if has_explicit_h else 0.5
+
+    energy_cache = {}
+
+    def residue_pair_energy(res_a, res_b):
+        """Non-bonded interaction energy (kcal/mol) between two residues, summed
+        over ALL their atom pairs (a residue-residue energy, as in protein energy
+        networks - e.g. Vijayabaskar & Vishveshwara 2010, Biophys. J. 99:3704 -
+        rather than the energy of the single atom pair that defined an edge).
+        NaN when either residue lacks PQR charges (e.g. a ligand pdb2pqr could not
+        parameterize) or when the two residues are fewer than 3 apart along the
+        chain, where bonded terms dominate and are not modelled."""
+        key = frozenset((id(res_a), id(res_b)))
+        if key in energy_cache:
+            return energy_cache[key]
+        value = np.nan
+        atoms_a, atoms_b = list(res_a), list(res_b)
+        if atoms_a and atoms_b and all('charge' in a.xtra for a in atoms_a + atoms_b):
+            separation = sequence_separation(res_a, res_b)
+            if separation is None or separation >= 3:
+                coords_a = np.array([a.coord for a in atoms_a], dtype=float)
+                coords_b = np.array([a.coord for a in atoms_b], dtype=float)
+                d = np.linalg.norm(coords_a[:, None, :] - coords_b[None, :, :], axis=2)
+                d = np.maximum(d, 1e-3)
+                q_a = np.array([a.xtra['charge'] for a in atoms_a])
+                q_b = np.array([a.xtra['charge'] for a in atoms_b])
+                # atom pairs that count: everything except bonded neighbours
+                # across a covalent link between the two residues
+                keep = np.ones(d.shape, dtype=bool)
+                if frozenset((id(res_a), id(res_b))) in linked_residue_pairs:
+                    for i, x in enumerate(atoms_a):
+                        for j, y in enumerate(atoms_b):
+                            if frozenset((id(x), id(y))) in bonded_across_link:
+                                keep[i, j] = False
+                value = COULOMB_CONSTANT * float(np.sum((np.outer(q_a, q_b) / (4.0 * d * d))[keep]))
+                if include_vdw:
+                    # Polar hydrogens carry no Lennard-Jones term, as in the AMBER
+                    # and CHARMM force fields (zero or negligible LJ parameters):
+                    # in an H-bond they sit well inside the acceptor's vdW radius
+                    # and their interaction is the electrostatic one.
+                    r_a = np.array([get_vdw_radius(get_element(a)) for a in atoms_a])
+                    r_b = np.array([get_vdw_radius(get_element(a)) for a in atoms_b])
+                    lj_a = np.array([polar_h_parent.get(id(a)) is None for a in atoms_a])
+                    lj_b = np.array([polar_h_parent.get(id(a)) is None for a in atoms_b])
+                    ratio6 = ((r_a[:, None] + r_b[None, :]) / d) ** 6
+                    lj = ratio6 ** 2 - 2 * ratio6
+                    value += LJ_WELL_DEPTH * float(np.sum(lj[keep & np.outer(lj_a, lj_b)]))
+        energy_cache[key] = value
+        return value
 
     if calc_method == "insty":
         try:
@@ -381,31 +468,82 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                     
 
         except Exception as e:
-            print(f"ProDy calculation failed: {e}. Falling back to standard method.")
-            calc_method = "standard"
+            print(f"ProDy calculation failed: {e}. Falling back to the Sauron method.")
+            calc_method = "sauron"
 
     pairs = []
-    if calc_method == "voronoi":
-        from scipy.spatial import Voronoi
-        filtered_atoms = [a for a in atoms if a.parent.id[0] != 'W']
-        coords = np.array([a.coord for a in filtered_atoms])
-        if len(coords) >= 4:
-            try:
-                vor = Voronoi(coords)
-                pairs_set = set()
-                for ridge in vor.ridge_points:
-                    pairs_set.add(tuple(sorted([ridge[0], ridge[1]])))
-                for i, j in pairs_set:
-                    a1, a2 = filtered_atoms[i], filtered_atoms[j]
-                    if np.linalg.norm(a1.coord - a2.coord) <= 6.5:
-                        pairs.append((a1, a2))
-            except:
-                calc_method = "standard"
-                
-    if calc_method == "standard":
+    if calc_method == "sauron":
         ns = NeighborSearch(atoms)
         pairs = ns.search_all(6.5)
         
+    # Sequence separation from chain connectivity, not from residue numbers.
+    # Crystal numbering often skips (e.g. papain-family 99 -> 102, or a
+    # propeptide 62P -> 1) or repeats with insertion codes (0, 0A, 0B, ...), so
+    # |number difference| can call a peptide-bonded neighbor "far" (and report
+    # the 1.33 A C-N bond as a VDW:MC_MC contact) or call residues that are far
+    # apart in the chain "adjacent" (and drop their real contacts). Peptide
+    # bonds (C(i)-N(i+1), or O3'-P for nucleic acids) are found geometrically -
+    # file order can't be trusted, e.g. modified residues dropped by pdb2pqr are
+    # re-appended at the end of their chain - and each chain is split into
+    # covalently connected segments; inside a segment the separation is the
+    # number of links between the two residues.
+    PEPTIDE_LINK_MAX = 2.0  # A; a real C-N peptide bond is ~1.33 A
+    link_atoms = [a for a in atoms if a.parent.id[0] != 'W' and a.get_id() in ('C', 'N', "O3'", 'P')]
+    next_res = {}   # id(residue) -> following residue
+    prev_res = {}   # id(residue) -> preceding residue
+    if link_atoms:
+        for la, lb in NeighborSearch(link_atoms).search_all(PEPTIDE_LINK_MAX):
+            ra, rb = la.parent, lb.parent
+            if ra is rb or ra.parent is not rb.parent:
+                continue
+            names = (la.get_id(), lb.get_id())
+            if names == ('N', 'C') or names == ('P', "O3'"):
+                ra, rb = rb, ra
+            elif names not in (('C', 'N'), ("O3'", 'P')):
+                continue
+            # ra's C (or O3') is bonded to rb's N (or P): ra precedes rb.
+            if id(ra) not in next_res and id(rb) not in prev_res:
+                next_res[id(ra)] = rb
+                prev_res[id(rb)] = ra
+
+    chain_position = {}   # id(residue) -> (id(segment head), position in segment)
+    for chain in structure:
+        for residue in chain:
+            if residue.id[0] == 'W' or id(residue) in prev_res:
+                continue
+            # residue starts a segment (no preceding peptide bond); walk forward
+            position = 0
+            current = residue
+            while current is not None and id(current) not in chain_position:
+                chain_position[id(current)] = (id(residue), position)
+                position += 1
+                current = next_res.get(id(current))
+    # Cyclic chains have no head; give any residue left over its own segment.
+    for chain in structure:
+        for residue in chain:
+            if residue.id[0] != 'W' and id(residue) not in chain_position:
+                chain_position[id(residue)] = (id(residue), 0)
+
+    def sequence_separation(res_a, res_b):
+        """Residues between two residues along the same chain; None if unrelated."""
+        if res_a.parent is not res_b.parent:
+            return None
+        pos_a = chain_position.get(id(res_a))
+        pos_b = chain_position.get(id(res_b))
+        if pos_a is None or pos_b is None:
+            return None
+        if pos_a[0] == pos_b[0]:
+            # Same covalently connected stretch: count the links between them.
+            return abs(pos_a[1] - pos_b[1])
+        # A hetero group with no polymer link (ligand, ion) has no sequence
+        # position, whatever residue number it was given.
+        for res in (res_a, res_b):
+            if res.id[0] != ' ' and id(res) not in next_res and id(res) not in prev_res:
+                return None
+        # Across a chain break (unmodelled residues), numbering is the only
+        # estimate of how many residues are missing.
+        return abs(res_a.id[1] - res_b.id[1])
+
     res_pairs = {}
     for a1, a2 in pairs:
         r1, r2 = a1.parent, a2.parent
@@ -417,11 +555,13 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
         # same chain closer than 3 apart in sequence are geometrically forced into
         # contact by the fixed peptide-bond geometry alone (e.g. O(i)...N(i+1) sits
         # at ~2.2 A purely from the C=O/C-N bond angle, well inside every distance
-        # cutoff below) - this is not a meaningful non-covalent interaction. RING
-        # never reports edges for |i-j|<3 (confirmed against reference RING output:
-        # zero HBOND/VDW edges at sequence separation 1 or 2); without this filter
-        # every peptide bond in the structure was being mis-reported as an HBOND.
-        if r1.parent == r2.parent and abs(r1.id[1] - r2.id[1]) < 3:
+        # cutoff below) - this is not a meaningful non-covalent interaction. The
+        # minimum sequence separation of 3 is the usual convention for residue
+        # interaction networks; without it every peptide bond in the structure
+        # was being mis-reported as an HBOND.
+        # Separation follows chain connectivity, not residue numbers (see above).
+        separation = sequence_separation(r1, r2)
+        if separation is not None and separation < 3:
             continue
 
         key = tuple(sorted([r1, r2], key=lambda x: format_node_id(x)))
@@ -429,6 +569,49 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
             res_pairs[key] = []
         res_pairs[key].append((a1, a2))
         
+    # Per-atom lookups used inside the pair loop (computed once).
+    hbond_role = {id(a): get_hbond_role(a) for a in atoms}
+    polar_h_parent = {id(a): polar_hydrogen_parent(a) for a in atoms if get_element(a) == 'H'}
+    use_h_geometry = strict_angle and has_explicit_h
+
+    # Covalent links between non-local residues (disulfides, glycosylation,
+    # covalent ligands). As in force fields, atom pairs within three bonds of
+    # each other across the link (1-2, 1-3 and 1-4 pairs) are bonded neighbours,
+    # not non-bonded contacts: they are excluded from VDW, clashes and energies.
+    def atoms_within_bonds(res, start, max_bonds):
+        depth = {start: 0}
+        frontier = [start]
+        for level in range(1, max_bonds + 1):
+            nxt = []
+            for a in frontier:
+                for b in res:
+                    if b in depth:
+                        continue
+                    limit = 1.3 if 'H' in (get_element(a), get_element(b)) else 1.95
+                    if np.linalg.norm(a.coord - b.coord) <= limit:
+                        depth[b] = level
+                        nxt.append(b)
+            frontier = nxt
+        return depth
+    bonded_across_link = set()
+    linked_residue_pairs = set()
+    heavy_atoms = [a for a in atoms if a.parent.id[0] != 'W' and get_element(a) != 'H'
+                   and get_element(a) not in METAL_COORD_DIST]
+    if heavy_atoms:
+        for la, lb in NeighborSearch(heavy_atoms).search_all(COVALENT_LINK_MAX):
+            if la.parent is lb.parent:
+                continue
+            separation = sequence_separation(la.parent, lb.parent)
+            if separation is not None and separation < 3:
+                continue
+            linked_residue_pairs.add(frozenset((id(la.parent), id(lb.parent))))
+            depth_a = atoms_within_bonds(la.parent, la, 2)
+            depth_b = atoms_within_bonds(lb.parent, lb, 2)
+            for xa, da in depth_a.items():
+                for xb, db in depth_b.items():
+                    if da + db + 1 <= 3:
+                        bonded_across_link.add(frozenset((id(xa), id(xb))))
+
     for (r1, r2), atom_pairs in res_pairs.items():
         n1 = format_node_id(r1)
         n2 = format_node_id(r2)
@@ -443,7 +626,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                 if dist <= 2.5:
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'SSBOND:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(r1['SG'], r2['SG']):.4f}" if calc_energy else 'nan', 'Atom1': 'SG', 'Atom2': 'SG',
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': 'SG', 'Atom2': 'SG',
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
                     continue
@@ -479,16 +662,14 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
             if ap is not None:
                 dist = np.linalg.norm(cp - ap)
                 if dist <= 4.0:
-                    # For the energy term (if requested), use the actual closer anion
-                    # oxygen rather than its centroid, since calc_energy_terms needs
-                    # real atoms (occupancy/bfactor) to work with.
+                    # Atom2 reports the anion oxygen closest to the cation atom.
                     anion_atom = min(
                         (anion_res[a] for a in ANION_ATOMS[anion_res.resname] if a in anion_res),
                         key=lambda a: np.linalg.norm(a.coord - cp)
                     )
                     edges.append({
                         'NodeId1': n1, 'Interaction': 'IONIC:SC_SC', 'NodeId2': n2,
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(cation_atom, anion_atom):.4f}" if calc_energy else 'nan', 'Atom1': cation_atom.name, 'Atom2': anion_atom.name,
+                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': cation_atom.name, 'Atom2': anion_atom.name,
                         'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                     })
 
@@ -547,47 +728,58 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
         halogens = {'F', 'CL', 'BR', 'I'}
         metals = set(METAL_COORD_DIST.keys())
 
+        # PIHBOND (X-H...pi). With hydrogen positions available (strict angle on
+        # and explicit hydrogens) the donor's hydrogen must point at the ring:
+        # H...centroid <= PIHBOND_MAX_H_CENTROID and X-H...centroid >=
+        # PIHBOND_MIN_ANGLE (Steiner & Koellner 2001). Without them only the
+        # heavy-atom distance donor...centroid <= PIHBOND_MAX_DONOR_CENTROID can be
+        # applied, which cannot tell whether the hydrogen points at the ring.
         pihbond_found = False
         aromatics = ['PHE', 'TYR', 'TRP', 'HIS']
         if r1.resname in aromatics or r2.resname in aromatics:
             for r_arom, r_donor in [(r1, r2), (r2, r1)]:
-                if r_arom.resname in aromatics:
-                    c_arom = get_centroid(r_arom)
-                    if c_arom is not None:
-                        for a_donor in r_donor:
-                            # Require a genuine H-bond donor (an atom that actually
-                            # carries a polar hydrogen), not just any N/O/S - the same
-                            # "any polar atom qualifies" mistake that over-counted HBOND.
-                            is_donor, _ = get_hbond_role(a_donor)
-                            if is_donor:
-                                dist = np.linalg.norm(c_arom - a_donor.coord)
-                                # Heavy-atom-to-ring-centroid distance; ~1 A longer than
-                                # the H...centroid geometric criterion since no explicit
-                                # hydrogen position is assumed (Steiner & Koellner, 2001).
-                                if dist <= 4.0:
-                                    edges.append({
-                                        'NodeId1': n1, 'Interaction': f'PIHBOND:SC_{"MC" if a_donor.name in MC_ATOMS else "SC"}', 'NodeId2': n2,
-                                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': '', 'Atom2': a_donor.name,
-                                        'Donor': format_node_id(r_donor), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
-                                    })
-                                    pihbond_found = True
-                                    break
-                if pihbond_found: break
+                if r_arom.resname not in aromatics:
+                    continue
+                c_arom = get_centroid(r_arom)
+                if c_arom is None:
+                    continue
+                for a_donor in r_donor:
+                    # a genuine H-bond donor (carries a polar hydrogen), not any N/O/S
+                    if not hbond_role[id(a_donor)][0]:
+                        continue
+                    dist = np.linalg.norm(c_arom - a_donor.coord)
+                    if dist > PIHBOND_MAX_DONOR_CENTROID:
+                        continue
+                    angle_str = 'nan'
+                    if use_h_geometry:
+                        best = None
+                        for h in get_attached_hydrogens(a_donor):
+                            d_h = np.linalg.norm(c_arom - h.coord)
+                            ang = calc_angle(a_donor.coord, h.coord, c_arom)
+                            if d_h <= PIHBOND_MAX_H_CENTROID and ang >= PIHBOND_MIN_ANGLE and (best is None or d_h < best[0]):
+                                best = (d_h, ang)
+                        if best is None:
+                            continue
+                        dist, ang = best
+                        angle_str = f"{ang:.3f}"
+                    edges.append({
+                        'NodeId1': n1, 'Interaction': f'PIHBOND:SC_{"MC" if a_donor.name in MC_ATOMS else "SC"}', 'NodeId2': n2,
+                        'Distance': f"{dist:.3f}", 'Angle': angle_str, 'Energy': 'nan', 'Atom1': '', 'Atom2': a_donor.name,
+                        'Donor': format_node_id(r_donor), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                    })
+                    pihbond_found = True
+                    break
+                if pihbond_found:
+                    break
 
-        # METAL/HALOGEN/HBOND are each independent (at most one edge per category, per
-        # residue pair). VDW is instead treated as the *fallback* contact: it is only
-        # reported when the pair has no more specific typed interaction at all. RING
-        # does occasionally report VDW alongside a typed interaction on the same pair
-        # (usually because it places explicit hydrogens, exposing a separate close
-        # H...atom contact we cannot see on a heavy-atom-only structure), but validating
-        # against reference RING output showed the fallback rule reproduces RING's VDW
-        # counts far more closely than treating VDW as fully independent, which -
-        # without RING's explicit-hydrogen geometry to naturally limit it - roughly
-        # doubled true VDW edges by re-reporting the same heavy-atom contact under a
-        # second label for nearly every already-typed pair.
+        # METAL/HALOGEN/HBOND are each independent (at most one edge per category
+        # and residue pair). VDW is reported only for residue pairs held together
+        # by van der Waals contact alone, i.e. with no more specific interaction:
+        # a residue pair that already has an H-bond is not re-counted as VDW under
+        # a second label. This is a reporting convention (one edge per mechanism),
+        # not a statement that H-bonded residues have no vdW contact.
         hbond_found = False
-        min_vdw_dist = 999.0
-        best_vdw_pair = None
+        best_vdw = None   # (surface gap, a1, a2, distance)
         metal_found = False
         halogen_found = False
 
@@ -601,73 +793,105 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
             el1 = get_element(a1)
             el2 = get_element(a2)
 
-            # METAL Coordination (per-metal distance cutoff, see METAL_COORD_DIST)
-            if not metal_found:
-                if el1 in metals and el2 in donors_acceptors:
-                    metal_el, other_el = el1, el2
-                elif el2 in metals and el1 in donors_acceptors:
-                    metal_el, other_el = el2, el1
-                else:
-                    metal_el = None
-                if metal_el is not None and dist <= get_metal_coord_dist(metal_el):
-                    edges.append({
-                        'NodeId1': format_node_id(a1.parent), 'Interaction': f'METAL:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                        'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
-                        'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
-                    })
-                    metal_found = True
-
-            # HALOGEN Bond (sum of vdW radii + small tolerance, rather than a flat cutoff,
-            # so it scales correctly across F/Cl/Br/I instead of under-counting the larger halogens)
-            if not halogen_found:
-                if (el1 in halogens and el2 in donors_acceptors) or (el2 in halogens and el1 in donors_acceptors):
-                    halogen_dist = get_vdw_radius(el1) + get_vdw_radius(el2) + 0.3
-                    if dist <= halogen_dist:
+            # METAL coordination (per-metal distance cutoff, see METAL_COORD_DIST)
+            if el1 in metals or el2 in metals:
+                if not metal_found:
+                    if el1 in metals and el2 in donors_acceptors:
+                        metal_el = el1
+                    elif el2 in metals and el1 in donors_acceptors:
+                        metal_el = el2
+                    else:
+                        metal_el = None
+                    if metal_el is not None and dist <= get_metal_coord_dist(metal_el):
                         edges.append({
-                            'NodeId1': format_node_id(a1.parent), 'Interaction': f'HALOGEN:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                            'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                            'NodeId1': format_node_id(a1.parent), 'Interaction': f'METAL:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
+                            'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
                             'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                         })
-                        halogen_found = True
+                        metal_found = True
+                # coordination geometry is not a vdW contact nor a clash
+                continue
+            if frozenset((id(a1), id(a2))) in bonded_across_link:
+                continue
 
-            # Check HBOND: require a genuine donor/acceptor pairing (not just "both
-            # polar"), matching the atom's actual role in its residue (see get_hbond_role).
+            r_sum = get_vdw_radius(el1) + get_vdw_radius(el2)
+            if dist > r_sum + vdw_max_gap and dist > 3.5:
+                continue   # too far for any atom-pair criterion below
+
+            # HALOGEN bond: X...A <= sum of vdW radii and C-X...A >= HALOGEN_MIN_ANGLE
+            special_geometry = False
+            if (el1 in halogens and el2 in donors_acceptors) or (el2 in halogens and el1 in donors_acceptors):
+                x, acc = (a1, a2) if el1 in halogens else (a2, a1)
+                if dist <= r_sum:
+                    carbon = min((a for a in x.parent if a is not x and get_element(a) == 'C'
+                                  and np.linalg.norm(a.coord - x.coord) <= 2.3),
+                                 key=lambda a: np.linalg.norm(a.coord - x.coord), default=None)
+                    if carbon is not None:
+                        ang = calc_angle(carbon.coord, x.coord, acc.coord)
+                        if ang >= HALOGEN_MIN_ANGLE:
+                            special_geometry = True
+                            if not halogen_found:
+                                edges.append({
+                                    'NodeId1': format_node_id(a1.parent), 'Interaction': f'HALOGEN:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
+                                    'Distance': f"{dist:.3f}", 'Angle': f"{ang:.3f}", 'Energy': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                                    'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                                })
+                                halogen_found = True
+
+            # HBOND: a genuine donor and acceptor (by their role in the residue),
+            # donor...acceptor <= 3.5 A and, with hydrogen positions, a donor-H...acceptor
+            # angle > 120 deg (Baker & Hubbard 1984). Each direction is tried only
+            # when the roles allow it, and the Donor column reports the direction
+            # that passed.
             if dist <= 3.5:
-                d1, acc1 = get_hbond_role(a1)
-                d2, acc2 = get_hbond_role(a2)
-                donor, acceptor = (None, None)
+                d1, acc1 = hbond_role[id(a1)]
+                d2, acc2 = hbond_role[id(a2)]
+                directions = []
                 if d1 and acc2:
-                    donor, acceptor = a1, a2
-                elif d2 and acc1:
-                    donor, acceptor = a2, a1
-                if donor is not None:
-                    angle_val = 150.000
+                    directions.append((a1, a2))
+                if d2 and acc1:
+                    directions.append((a2, a1))
+                if directions:
+                    special_geometry = True
+                    chosen = None
                     if strict_angle:
-                        valid, computed_angle = check_hbond_angle(donor, acceptor)
-                        if not valid:
-                            continue
-                        angle_val = computed_angle
+                        for donor, acceptor in directions:
+                            ok, ang = check_hbond_angle(donor, acceptor)
+                            if ok and (chosen is None or ang > chosen[2]):
+                                chosen = (donor, acceptor, ang)
+                    else:
+                        chosen = (directions[0][0], directions[0][1], 150.0)
+                    if chosen is not None:
+                        donor, _, angle_val = chosen
+                        edges.append({
+                            'NodeId1': format_node_id(a1.parent), 'Interaction': f'HBOND:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
+                            'Distance': f"{dist:.3f}", 'Angle': f"{angle_val:.3f}", 'Energy': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                            'Donor': format_node_id(donor.parent), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
+                        })
+                        hbond_found = True
 
-                    edges.append({
-                        'NodeId1': format_node_id(a1.parent), 'Interaction': f'HBOND:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                        'Distance': f"{dist:.3f}", 'Angle': f"{angle_val:.3f}", 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
-                        'Donor': format_node_id(donor.parent), 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
-                    })
-                    hbond_found = True
+            # A polar hydrogen and an acceptor overlap by design in an H-bond
+            # (H...O ~1.9 A vs 2.72 A radii sum): that geometry belongs to HBOND,
+            # not to vdW contact or clash assessment.
+            if (polar_h_parent.get(id(a1)) is not None and hbond_role[id(a2)][1]) or \
+               (polar_h_parent.get(id(a2)) is not None and hbond_role[id(a1)][1]):
+                continue
+            # Covalent links between residues (glycosylation, covalent ligands).
+            if el1 != 'H' and el2 != 'H' and dist < COVALENT_LINK_MAX:
+                continue
 
-            # Track the closest VDW-qualifying atom pair (element-correct radii; see get_element)
-            vdw_dist = get_vdw_radius(el1) + get_vdw_radius(el2) + VDW_TOLERANCE
-            if dist <= vdw_dist and dist < min_vdw_dist:
-                min_vdw_dist = dist
-                best_vdw_pair = (a1, a2)
+            gap = dist - r_sum   # separation of the two vdW surfaces
+            if gap <= -CLASH_MIN_OVERLAP:
+                continue   # steric clash: never a VDW edge (listed by the clash scan below)
+            if gap <= vdw_max_gap and (best_vdw is None or gap < best_vdw[0]):
+                best_vdw = (gap, a1, a2, dist)
 
-        # VDW is the fallback contact type (see note above): only reported when this
-        # residue pair has no more specific interaction already.
-        if not hbond_found and not metal_found and not halogen_found and not pihbond_found and best_vdw_pair:
-            a1, a2 = best_vdw_pair
+        # VDW is the fallback contact type (see note above)
+        if not hbond_found and not metal_found and not halogen_found and not pihbond_found and best_vdw:
+            _, a1, a2, vdw_d = best_vdw
             edges.append({
                 'NodeId1': format_node_id(a1.parent), 'Interaction': f'VDW:{get_contact_type(a1, a2)}', 'NodeId2': format_node_id(a2.parent),
-                'Distance': f"{min_vdw_dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(a1, a2):.4f}" if calc_energy else 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
+                'Distance': f"{vdw_d:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': a1.name, 'Atom2': a2.name,
                 'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
             })
 
@@ -716,13 +940,69 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
                                 pa1, pa2 = pa2, pa1
                             edges.append({
                                 'NodeId1': n1, 'Interaction': f'WATERBRIDGE:{get_contact_type(pa1, pa2)}', 'NodeId2': n2,
-                                'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': f"{calc_energy_terms(pa1, pa2):.4f}" if calc_energy else 'nan', 'Atom1': pa1.name, 'Atom2': pa2.name,
+                                'Distance': f"{dist:.3f}", 'Angle': 'nan', 'Energy': 'nan', 'Atom1': pa1.name, 'Atom2': pa2.name,
                                 'Donor': '', 'Positive': '', 'Cation': '', 'Orientation': '', 'Model': model_num
                             })
                             nodes.add(r1)
                             nodes.add(r2)
             except Exception as e:
                 pass
+
+    # Steric clashes, scanned independently of the network method so the same
+    # structure always gives the same list: non-local residue pairs (>= 3 apart
+    # along the chain) whose atoms overlap by >= CLASH_MIN_OVERLAP. Not clashes:
+    # metal coordination, covalent links, and pairs that are legitimately closer
+    # than their radii sum (donor/acceptor atoms within H-bond distance, a polar
+    # hydrogen and an acceptor, a halogen and an acceptor).
+    scan_atoms = [a for a in atoms if a.parent.id[0] != 'W']
+    if scan_atoms:
+        for c1, c2 in NeighborSearch(scan_atoms).search_all(3.4):
+            if c1.parent is c2.parent:
+                continue
+            separation = sequence_separation(c1.parent, c2.parent)
+            if separation is not None and separation < 3:
+                continue
+            e1, e2 = get_element(c1), get_element(c2)
+            if e1 in METAL_COORD_DIST or e2 in METAL_COORD_DIST:
+                continue
+            d = np.linalg.norm(c1.coord - c2.coord)
+            overlap = get_vdw_radius(e1) + get_vdw_radius(e2) - d
+            if overlap < CLASH_MIN_OVERLAP:
+                continue
+            if e1 != 'H' and e2 != 'H' and d < COVALENT_LINK_MAX:
+                continue
+            (d1, acc1), (d2, acc2) = hbond_role[id(c1)], hbond_role[id(c2)]
+            if d <= 3.5 and ((d1 and acc2) or (d2 and acc1)):
+                continue
+            if (polar_h_parent.get(id(c1)) is not None and acc2) or (polar_h_parent.get(id(c2)) is not None and acc1):
+                continue
+            if (e1 in ('F', 'CL', 'BR', 'I') and e2 in ('N', 'O', 'S')) or (e2 in ('F', 'CL', 'BR', 'I') and e1 in ('N', 'O', 'S')):
+                continue
+            if frozenset((id(c1), id(c2))) in bonded_across_link:
+                continue
+            if format_node_id(c1.parent) > format_node_id(c2.parent):
+                c1, c2 = c2, c1
+            clashes.append({
+                'NodeId1': format_node_id(c1.parent), 'NodeId2': format_node_id(c2.parent),
+                'Atom1': c1.name, 'Atom2': c2.name, 'Distance': f"{d:.3f}",
+                'Overlap': f"{overlap:.3f}", 'Model': model_num
+            })
+
+    # Residue-residue interaction energy on every edge of a residue pair
+    # (--energy). Water bridges are water-mediated, so the direct energy between
+    # the two residues does not describe them and stays NaN.
+    if calc_energy:
+        residue_by_node = {format_node_id(r): r for r in structure.get_residues()}
+        for e in edges:
+            if e['Interaction'].startswith('WATERBRIDGE'):
+                continue
+            ra = residue_by_node.get(e['NodeId1'])
+            rb = residue_by_node.get(e['NodeId2'])
+            if ra is not None and rb is not None and ra is not rb:
+                value = residue_pair_energy(ra, rb)
+                e['Energy'] = 'nan' if np.isnan(value) else f"{value:.4f}"
+
+    clashes_df = pd.DataFrame(clashes, columns=['NodeId1', 'NodeId2', 'Atom1', 'Atom2', 'Distance', 'Overlap', 'Model'])
 
     # Return edges df
     edges_df = pd.DataFrame(edges)
@@ -754,7 +1034,7 @@ def calculate_rin(structure, strict_angle=False, remove_multiples=False, model_n
         edges_df = edges_df.sort_values(by=['sort_key'])
         edges_df = edges_df.drop(columns=['sort_key'])
         
-    return edges_df, nodes
+    return edges_df, nodes, clashes_df
 
 def build_nodes_df(nodes, edges_df, pdbFileName="", structure=None, model_num=1):
     G = nx.Graph()
@@ -884,7 +1164,7 @@ def analyze_network(edges_df, nodes_df, prefix):
     return degree_dict
 
 def main():
-    parser = argparse.ArgumentParser(description="Calculate RIN using RING 4.0 thresholds")
+    parser = argparse.ArgumentParser(description="Sauron: residue interaction network (RIN) calculator. Output follows the RING edge/node file format.")
     parser.add_argument("input", help="Input PDB or CIF file")
     # On by default to stay in sync with SauronGUI.py, which always adds hydrogens:
     # --strict-angle (also on by default) rejects every HBOND without explicit hydrogens.
@@ -892,10 +1172,22 @@ def main():
     # On by default to stay in sync with SauronGUI.py, which always enforces both.
     parser.add_argument("--strict-angle", action=argparse.BooleanOptionalAction, default=True, help="Enforce strict angle constraints for Hydrogen Bonds (e.g. >120 deg). On by default; use --no-strict-angle to disable. Needs explicit hydrogens (native or via --add-h), otherwise no HBOND edges are kept")
     parser.add_argument("--remove-multiples", action=argparse.BooleanOptionalAction, default=True, help="Remove multiple interactions of the same type between the same residue pair. On by default; use --no-remove-multiples to disable")
-    parser.add_argument("--calc-method", choices=["standard", "voronoi", "insty", "rinpy"], default="standard", help="Method for RIN calculation")
+    def calc_method_arg(value):
+        value = value.strip().lower()
+        if value == 'standard':
+            return 'sauron'   # former name of the Sauron method, kept for existing scripts
+        if value == 'voronoi':
+            raise argparse.ArgumentTypeError(
+                "the Voronoi method was removed: with Sauron's distance criteria its networks were a "
+                "subset of the Sauron method's (residue-pair Jaccard >= 0.98); use 'sauron'")
+        return value
+    parser.add_argument("--calc-method", type=calc_method_arg, choices=["sauron", "insty", "rinpy"], default="sauron",
+                        help="Method for RIN calculation: 'sauron' (Sauron's own geometric criteria, default), 'insty' (ProDy InSty) or 'rinpy' (elastic network model). 'standard' is accepted as the former name of 'sauron'.")
     parser.add_argument("--chains", type=str, help="Comma-separated list of chains to calculate (e.g. A,B,C)")
-    parser.add_argument("--energy", action="store_true", help="Calculate Interaction Energy (PENs). Requires a PQR file or --add-h.")
-    parser.add_argument("--vdw-energy", action="store_true", help="Include generic Lennard-Jones VDW term in energy calculation. If not set, only Electrostatics is computed.")
+    parser.add_argument("--energy", action="store_true", help="Residue-residue interaction energy (kcal/mol) on every edge, summed over all atom pairs of the two residues: Coulomb with PQR partial charges and a distance-dependent dielectric (4r). Requires PQR charges (--add-h, the default, or a PQR input).")
+    parser.add_argument("--vdw-energy", action="store_true", help="With --energy, add a generic 12-6 Lennard-Jones term (well depth 0.1 kcal/mol, r_min = sum of Bondi radii). If not set, only electrostatics is computed.")
+    parser.add_argument("--vdw-contacts", choices=sorted(VDW_CONTACT_MAX_GAP), default=DEFAULT_VDW_CONTACTS,
+                        help="Van der Waals contact classes accepted as VDW edges (Word et al. 1999 / MolProbity): 'close' (default) = vdW surfaces at most 0.25 A apart; 'wide' = up to 0.5 A apart. Overlaps of 0.4 A or more are steric clashes in both modes.")
     parser.add_argument("--water-bridges", action="store_true", help="Detect water-mediated bridges (WATERBRIDGE edges) between residues sharing a crystallographic water. This is a Sauron-specific extension with no equivalent RING interaction type, off by default.")
     args = parser.parse_args()
     
@@ -1026,7 +1318,15 @@ def main():
                                 chain.add(orig_res)
         else:
             struct_to_calc = orig_model
-            pqr_file = temp_pdb
+            pqr_file = input_file if input_file.lower().endswith('.pqr') else temp_pdb
+
+        # Partial charges for --energy come only from a real PQR file (pdb2pqr
+        # output with --add-h, or a PQR given as input). Occupancy and B-factor of
+        # an ordinary PDB/CIF are not charges and are never used as such.
+        if args.energy:
+            n_param = load_pqr_parameters(struct_to_calc, pqr_file) if pqr_file.lower().endswith('.pqr') else 0
+            if n_param == 0:
+                print("Warning: --energy needs partial charges (use --add-h or a PQR input); Energy will be NaN.")
             
         if args.chains:
             valid_chains = [c.strip() for c in args.chains.split(',')]
@@ -1034,7 +1334,7 @@ def main():
                 if chain.id not in valid_chains:
                     struct_to_calc.detach_child(chain.id)
             
-        edges_df, nodes = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num, calc_method=args.calc_method, pqr_file=pqr_file, calc_energy=args.energy, include_vdw=args.vdw_energy, water_bridges=args.water_bridges)
+        edges_df, nodes, clashes_df = calculate_rin(struct_to_calc, strict_angle=args.strict_angle, remove_multiples=args.remove_multiples, model_num=model_num, calc_method=args.calc_method, pqr_file=pqr_file, calc_energy=args.energy, include_vdw=args.vdw_energy, water_bridges=args.water_bridges, vdw_contacts=args.vdw_contacts)
         nodes_df = build_nodes_df(nodes, edges_df, os.path.basename(args.input), structure=struct_to_calc, model_num=model_num)
         
         edges_out = f"{prefix}.edges"
@@ -1045,7 +1345,13 @@ def main():
         if not nodes_df.empty:
             nodes_df.to_csv(nodes_out, sep='\t', index=False)
             
+        # Steric clashes (vdW overlap >= 0.4 A) are structural defects, not
+        # interactions: listed apart and never used as network edges.
+        clashes_out = f"{prefix}_clashes.tsv"
+        clashes_df.to_csv(clashes_out, sep='\t', index=False)
+
         print(f"Generated {edges_out} and {nodes_out}")
+        print(f"Steric clashes (overlap >= {CLASH_MIN_OVERLAP} A) between non-local residues: {len(clashes_df)} (see {clashes_out})")
         degree_dict = analyze_network(edges_df, nodes_df, prefix)
         
         # Write Log
@@ -1060,6 +1366,10 @@ def main():
             logf.write(f"Energy (PEN): {args.energy}\n")
             logf.write(f"Include VDW: {args.vdw_energy}\n")
             logf.write(f"Water Bridges: {args.water_bridges}\n")
+            if args.calc_method == 'insty':
+                logf.write("VDW Contacts: not used (ProDy InSty applies its own criteria)\n")
+            else:
+                logf.write(f"VDW Contacts: {args.vdw_contacts} (vdW surface gap <= {VDW_CONTACT_MAX_GAP[args.vdw_contacts]} A)\n")
             logf.write(f"Chains: {args.chains if args.chains else 'ALL'}\n")
             logf.write(f"Total Nodes: {len(nodes)}\n")
             logf.write(f"Total Edges: {len(edges_df)}\n")
@@ -1089,7 +1399,8 @@ def main():
         io.save(f"{prefix}_degree.pdb")
         
         if os.path.exists(temp_pdb): os.remove(temp_pdb)
-        if pqr_file != temp_pdb and os.path.exists(pqr_file): os.remove(pqr_file)
+        # only the pdb2pqr output generated here; never a PQR given as input
+        if args.add_h and pqr_file not in (temp_pdb, input_file) and os.path.exists(pqr_file): os.remove(pqr_file)
 
 if __name__ == "__main__":
     main()

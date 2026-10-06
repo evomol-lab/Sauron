@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadForm = document.getElementById('upload-form');
     const errorMessage = document.getElementById('error-message');
     const successState = document.getElementById('success-state');
+    // Residue-residue interaction energy of an edge (NaN when not computed:
+    // PEN off, ligands without charges, water bridges).
+    const formatEnergy = (e) => (e === undefined || e === '' || e.toLowerCase() === 'nan') ? 'N/A' : e;
     const downloadBtn = document.getElementById('download-btn');
     const resetBtn = document.getElementById('reset-btn');
 
@@ -193,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('calc_energy', document.getElementById('calc_energy').checked);
         formData.append('vdw_energy', document.getElementById('vdw_energy').checked);
         formData.append('water_bridges', document.getElementById('water_bridges').checked);
+        formData.append('vdw_contacts', document.getElementById('vdw_contacts').value);
         
         const chainsOpt = document.querySelector('input[name="chains_opt"]:checked').value;
         formData.append('chains_opt', chainsOpt);
@@ -215,6 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
             successState.style.display = 'block';
             document.querySelector('.container').classList.add('expanded');
             downloadBtn.href = data.downloadUrl;
+
+            // Steric clashes are excluded from the network and listed apart
+            const clashNote = document.getElementById('clash-note');
+            if (data.clashesFile) {
+                clashNote.textContent = data.nClashes > 0
+                    ? `${data.nClashes} steric clash(es) (van der Waals overlap ≥ 0.4 Å) were found and excluded from the network; see ${data.clashesFile} in the results .zip. Clashes involving added hydrogens usually reflect hydrogen placement, not errors in the deposited model.`
+                    : 'No steric clashes (van der Waals overlap ≥ 0.4 Å) between non-local residues.';
+                clashNote.style.display = 'block';
+            } else {
+                clashNote.style.display = 'none';
+            }
 
             // Load Visualizations
             loadVisualizations(data);
@@ -862,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td style="padding: 8px;">${interaction}</td>
                                 <td style="padding: 8px;">${dist}</td>
                                 <td style="padding: 8px;">${ang}</td>
+                                <td style="padding: 8px;">${formatEnergy(link.energy)}</td>
                             `;
                             tbody.appendChild(tr);
                         });
@@ -930,6 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td style="padding: 8px;">${interaction}</td>
                                 <td style="padding: 8px;">${dist}</td>
                                 <td style="padding: 8px;">${ang}</td>
+                                <td style="padding: 8px;">${formatEnergy(link.energy)}</td>
                             `;
                             tbody.appendChild(tr);
                         });
@@ -996,6 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const interIdx = headers.indexOf('Interaction');
             const distIdx = headers.indexOf('Distance');
             const angleIdx = headers.indexOf('Angle');
+            const energyIdx = headers.indexOf('Energy');
             
             for (let i = 1; i < edgeLines.length; i++) {
                 const cols = edgeLines[i].split('\t');
@@ -1005,7 +1023,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         target: cols[id2Idx],
                         interaction: cols[interIdx],
                         distance: distIdx > -1 ? cols[distIdx] : '',
-                        angle: angleIdx > -1 ? cols[angleIdx] : ''
+                        angle: angleIdx > -1 ? cols[angleIdx] : '',
+                        energy: energyIdx > -1 ? cols[energyIdx] : ''
                     });
                 }
             }
@@ -1088,6 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding: 8px;">${interaction}</td>
                     <td style="padding: 8px;">${dist}</td>
                     <td style="padding: 8px;">${ang}</td>
+                    <td style="padding: 8px;">${formatEnergy(link.energy)}</td>
                 `;
                 tbody.appendChild(tr);
             });

@@ -69,7 +69,11 @@ def upload():
         except Exception as e:
             return jsonify({'error': f"Failed to fetch structure from {fetch_db.upper()}: {str(e)}"}), 400
 
-    calc_method = request.form.get('calc_method', 'standard')
+    calc_method = request.form.get('calc_method', 'sauron')
+    if calc_method == 'standard':   # former name of the Sauron method
+        calc_method = 'sauron'
+    if calc_method not in ('sauron', 'insty', 'rinpy'):
+        return jsonify({'error': f"Unknown calculation method: {calc_method}"}), 400
     strict_angle = True
     remove_multiples = True
     chains_opt = request.form.get('chains_opt') # 'all' or 'specific'
@@ -77,6 +81,9 @@ def upload():
     calc_energy = request.form.get('calc_energy') == 'true'
     vdw_energy = request.form.get('vdw_energy') == 'true'
     water_bridges = request.form.get('water_bridges') == 'true'
+    vdw_contacts = request.form.get('vdw_contacts', 'close')
+    if vdw_contacts not in ('close', 'wide'):
+        vdw_contacts = 'close'
     
     # Clear previous output files in UPLOAD_FOLDER
     for ext in ["*.edges", "*.nodes", "*.tsv", "*.zip", "*.log", "*_degree.pdb"]:
@@ -103,6 +110,7 @@ def upload():
     if calc_energy: cmd.append('--energy')
     if vdw_energy: cmd.append('--vdw-energy')
     if water_bridges: cmd.append('--water-bridges')
+    cmd.extend(['--vdw-contacts', vdw_contacts])
     if chains_opt == 'specific' and chains_input and chains_input.strip():
         cmd.extend(['--chains', chains_input.strip().upper()])
     
@@ -168,6 +176,8 @@ def upload():
     edges_file = None
     nodes_file = None
     metrics_file = None
+    clashes_file = None
+    n_clashes = None
     if not is_rinpy:
         for f in out_files:
             basename = os.path.basename(f)
@@ -177,6 +187,11 @@ def upload():
                 nodes_file = basename
             if basename.endswith("network_metrics.tsv") and (metrics_file is None or "model_1_" in basename):
                 metrics_file = basename
+            if basename.endswith("_clashes.tsv") and (clashes_file is None or "model_1_" in basename):
+                clashes_file = basename
+        if clashes_file:
+            with open(os.path.join(UPLOAD_FOLDER, clashes_file)) as cf:
+                n_clashes = max(sum(1 for _ in cf) - 1, 0)
             
     is_multimodel = not is_rinpy and any("model_2" in f for f in out_files)
     
@@ -186,6 +201,8 @@ def upload():
         'edgesFile': edges_file,
         'nodesFile': nodes_file,
         'metricsFile': metrics_file,
+        'clashesFile': clashes_file,
+        'nClashes': n_clashes,
         'isMultimodel': is_multimodel,
         'isRinpy': is_rinpy,
         'rinpyHtml': rinpy_html,

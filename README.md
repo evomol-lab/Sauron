@@ -16,14 +16,13 @@ Developed by the EvoMol-lab Team, BioMe, UFRN.
 
 ## Features
 
-- **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, VDW, METAL coordination, HALOGEN bonds, PIHBOND (π-hydrogen), and (opt-in) water-mediated bridges. See [DOCUMENTATION.md](DOCUMENTATION.md#interaction-types-and-geometric-definitions) for the exact geometric definition of each.
-- **Validated Against RING**: Interaction definitions were checked edge-by-edge against real [RING](https://ring.biocomputingup.it/) output on both X-ray and NMR-ensemble structures — see [DOCUMENTATION.md](DOCUMENTATION.md#validation-against-ring).
+- **Multiple Interaction Types**: Calculates SSBOND, IONIC (salt bridge), PIPISTACK, PICATION, HBOND, VDW, METAL coordination, HALOGEN bonds, PIHBOND (π-hydrogen), and (opt-in) water-mediated bridges. Steric clashes (van der Waals overlap ≥ 0.4 Å) are excluded from the network and listed in a separate `*_clashes.tsv` file. See [DOCUMENTATION.md](DOCUMENTATION.md#interaction-types-and-geometric-definitions) for the exact geometric definition of each.
+- **Literature-Based Criteria**: Every interaction threshold is defined a priori from the literature (e.g. van der Waals contacts and steric clashes follow the MolProbity all-atom contact classes), not tuned to reproduce another program. RING output can be used as an external benchmark — see [DOCUMENTATION.md](DOCUMENTATION.md#interaction-types-and-geometric-definitions).
 - **Topological Metrics**: Automatically computes network properties including Degree, Clustering Coefficient, Betweenness Centrality, and Eigenvector Centrality.
 - **Advanced 3D Web Dashboard**: Explore the network through a 3D force-directed graph perfectly synchronized with a structural viewer (PDBe Molstar) *and* the primary-sequence bar — selecting a residue in any one of them highlights it in all the others. The structural viewer dynamically adapts its background to the UI's Light/Dark mode.
 - **Direct Database Fetching**: Instantly calculate networks by providing an RCSB PDB ID or an AlphaFold UniProt ID.
 - **Versatile Calculation Methods**: 
-  - *Standard*: A fast and strictly constrained distance/angle algorithm.
-  - *Voronoi*: Applies Voronoi Tessellation to compute topological neighbor interactions with high sensitivity, circumventing reliance on fixed cutoffs.
+  - *Sauron* (default): Sauron's own geometric criteria (distance, angle and donor/acceptor roles), each defined from the literature.
   - *ProDy InSty*: A robust atomic-level interaction detector that captures complex interactions (like Pi-Stacking and Cation-Pi) while dynamically subtyping bonds (e.g. `MC_MC`, `SC_MC`, `SC_SC`).
   - *RinPy*: Applies an Elastic Network Model to detect critical hinge residues and overall residue centrality, generating specialized CSV reports.
 - **Rigorous Filters**: 
@@ -65,14 +64,15 @@ python sauron.py <input_file> [options]
 ```
 
 **Options:**
-- `--calc-method`: Choose the interaction calculation methodology (`standard`, `voronoi`, `insty`, or `rinpy`). Default is `standard`.
+- `--calc-method`: Choose the interaction calculation methodology (`sauron`, `insty`, or `rinpy`). Default is `sauron` (`standard`, its former name, is still accepted).
 - `--add-h` / `--no-add-h`: Add explicit hydrogens using `pdb2pqr` prior to calculations. **On by default** (same as the web interface), because strict angle checking and `insty` runs need explicit hydrogens.
 - `--strict-angle` / `--no-strict-angle`: Enforce strict angle constraints for Hydrogen Bonds (e.g. >120°). **On by default** (same as the web interface). Requires explicit hydrogens, which `--add-h` provides by default.
 - `--remove-multiples` / `--no-remove-multiples`: Remove multiple interactions of the same type between the same residue pair. **On by default** (same as the web interface).
 - `--chains`: Comma-separated list of chains to calculate (e.g., A,B,C).
+- `--vdw-contacts {close,wide}`: Van der Waals contact classes counted as VDW edges (MolProbity all-atom contacts). `close` (default): vdW surfaces at most 0.25 Å apart; `wide`: up to 0.5 Å apart. Overlaps of 0.4 Å or more are steric clashes in both modes.
 - `--water-bridges`: Detect `WATERBRIDGE` edges between residues sharing a crystallographic water. This is a Sauron-specific extension with no equivalent RING interaction type, so it's off by default.
-- `--energy`: Compute a per-edge electrostatic interaction energy. Requires hydrogen addition (on by default) or an already charge-annotated (PQR) input.
-- `--vdw-energy`: With `--energy`, also add a generic Lennard-Jones term to the energy (electrostatics only otherwise).
+- `--energy`: Residue–residue interaction energy (kcal/mol) on every edge, summed over all atom pairs of the two residues (Coulomb, PQR charges, distance-dependent dielectric). Requires hydrogen addition (on by default) or a PQR input.
+- `--vdw-energy`: With `--energy`, also add a generic Lennard-Jones term (Bondi radii; polar hydrogens excluded). Electrostatics only otherwise.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md#command-line-interface-sauronpy) for the full option reference, including what each `--calc-method` does.
 
