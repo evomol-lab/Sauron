@@ -250,5 +250,7 @@ if __name__ == '__main__':
     if getattr(sys, 'frozen', False):
         threading.Timer(1.25, open_browser).start()
         
-    app.run(host='0.0.0.0', port=5000, debug=not getattr(sys, 'frozen', False))
+    # Debug mode stays off: the server listens on 0.0.0.0 (needed inside containers), and
+    # Werkzeug's interactive debugger would let anyone who reaches the port run code.
+    app.run(host='0.0.0.0', port=5000, debug=False)
 

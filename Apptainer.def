@@ -1,32 +1,60 @@
 Bootstrap: docker
-From: python:3.10-slim
+From: docker.io/library/python:3.12-slim
+
+# Same pinned, CPU-only environment as the Dockerfile (see requirements.txt).
+# Build from the repository root:  apptainer build sauron.sif Apptainer.def
+
+%labels
+    Title Sauron
+    Description Residue interaction network (RIN) calculator: web interface and command line
+    Source https://github.com/jpmslima/Sauron
+    Vendor EvoMol-Lab, BioMe, UFRN
+    License PolyForm-Noncommercial-1.0.0
 
 %help
-    Container for SauronGUI: Residue Interaction Network Calculator.
-    Usage:
-    apptainer run --bind /path/to/host/uploads:/opt/sauron/uploads sauron.sif
+    Sauron: residue interaction network (RIN) calculator.
+
+    Web interface (http://localhost:5000). The image is read-only, so results
+    go to a writable host directory bound to /opt/sauron/uploads:
+        mkdir -p sauron_uploads
+        apptainer run --bind sauron_uploads:/opt/sauron/uploads sauron.sif
+
+    Command line (results are written to the current directory):
+        apptainer run --app cli sauron.sif structure.cif [options]
+        apptainer run --app cli sauron.sif --help
 
 %files
-    . /opt/sauron
+    requirements.txt /opt/sauron/requirements.txt
+    sauron.py /opt/sauron/sauron.py
+    SauronGUI.py /opt/sauron/SauronGUI.py
+    DOCUMENTATION.md /opt/sauron/DOCUMENTATION.md
+    README.md /opt/sauron/README.md
+    LICENSE /opt/sauron/LICENSE
+    templates /opt/sauron/templates
+    static /opt/sauron/static
 
 %post
-    # Install system dependencies
-    apt-get update && apt-get install -y dssp
-    rm -rf /var/lib/apt/lists/*
-
-    # Install Python dependencies
-    cd /opt/sauron
-    pip install --no-cache-dir -r requirements.txt
-
-    # Ensure uploads directory exists and is writable
+    export PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+    python -m venv /opt/venv
+    /opt/venv/bin/pip install -r /opt/sauron/requirements.txt
     mkdir -p /opt/sauron/uploads
     chmod 777 /opt/sauron/uploads
 
 %environment
-    export LC_ALL=C
-    export FLASK_APP=SauronGUI.py
+    export PATH=/opt/venv/bin:$PATH
+    export LC_ALL=C.UTF-8
+    export PYTHONUNBUFFERED=1
+    export PYTHONDONTWRITEBYTECODE=1
+    export MPLBACKEND=Agg
     export SAURON_UPLOAD_DIR=/opt/sauron/uploads
 
 %runscript
     cd /opt/sauron
     exec python SauronGUI.py "$@"
+
+%apprun cli
+    exec python /opt/sauron/sauron.py "$@"
+
+%apphelp cli
+    Sauron command line. Results are written to the current directory.
+        apptainer run --app cli sauron.sif structure.cif [options]

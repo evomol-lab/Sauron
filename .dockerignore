@@ -1,0 +1,20 @@
+# Build context for the Sauron image: only what the Dockerfile uses.
+# Everything is excluded first, then the needed files are allowed back in. This
+# keeps .venv (~5 GB), build/ (~3 GB), uploads/, test data and results out of the
+# context sent to Docker/Podman.
+*
+
+!requirements.txt
+!sauron.py
+!SauronGUI.py
+!DOCUMENTATION.md
+!README.md
+!LICENSE
+!templates
+!templates/**
+!static
+!static/**
+
+**/__pycache__
+**/*.pyc
+**/.DS_Store

@@ -46,7 +46,7 @@ The core dependencies are listed in `requirements.txt`. Key packages include:
 - `pydssp` (optional, for secondary structure assignment)
 - `rinpy` (optional, for Elastic Network Model and hinge calculation)
 
-To install dependencies:
+To install dependencies (Python ≥ 3.12; versions pinned to the tested environment, with CPU-only PyTorch):
 ```bash
 pip install -r requirements.txt
 ```
@@ -99,22 +99,47 @@ For more detailed information, please see `DOCUMENTATION.md`.
 Sauron can be easily deployed via containers, bypassing the need to install Python dependencies manually.
 
 ### Docker / Podman
-Build and run the image using the provided `Dockerfile`:
+
+The image installs the pinned, CPU-only environment from `requirements.txt`.
+Image names are fully qualified (`docker.io/...`), which Podman requires.
+
 ```bash
-docker build -t sauron-gui .
-docker run -p 5000:5000 -v $(pwd)/uploads:/opt/sauron/uploads sauron-gui
+# Build locally from the repository root...
+docker build -t docker.io/evomol/sauron:latest .
+# ...or pull the published image
+docker pull docker.io/evomol/sauron:latest
+
+# Web interface on http://localhost:5000; results are kept in ./uploads
+mkdir -p uploads
+docker run --rm -p 5000:5000 -v "$PWD/uploads":/opt/sauron/uploads docker.io/evomol/sauron:latest
+
+# Command line; results are written to the current directory
+docker run --rm -v "$PWD":/data -w /data docker.io/evomol/sauron:latest \
+    python /opt/sauron/sauron.py structure.cif
 ```
-*(The `-v` flag mounts a local `uploads` directory so you can access the downloaded `.zip` output files easily.)*
+*On SELinux systems (Fedora, RHEL), add `:Z` to the `-v` options. With rootful
+Docker, add `--user "$(id -u):$(id -g)"` so the result files belong to you.*
 
 ### Apptainer / Singularity
-Build and run the image using the provided `Apptainer.def` file (ideal for HPC environments):
+
+Ideal for HPC clusters. Build from the repository root with `Apptainer.def`
+(same environment as the Docker image), or convert the published Docker image:
+
 ```bash
 apptainer build sauron.sif Apptainer.def
+# or
+apptainer build sauron.sif docker://docker.io/evomol/sauron:latest
 
-export SAURON_UPLOAD_DIR=/tmp/sauron_uploads
-mkdir -p $SAURON_UPLOAD_DIR
-apptainer run --bind $SAURON_UPLOAD_DIR:/opt/sauron/uploads sauron.sif
+# Web interface on http://localhost:5000. The image is read-only, so bind a
+# writable host directory for the results:
+mkdir -p sauron_uploads
+apptainer run --bind sauron_uploads:/opt/sauron/uploads sauron.sif
+
+# Command line; results are written to the current directory
+apptainer exec sauron.sif python /opt/sauron/sauron.py structure.cif
 ```
+*Images built from `Apptainer.def` also offer the shortcut
+`apptainer run --app cli sauron.sif structure.cif`.*
 
 ## Google Colab Notebook
 
