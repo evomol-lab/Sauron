@@ -141,14 +141,6 @@ apptainer exec sauron.sif python /opt/sauron/sauron.py structure.cif
 *Images built from `Apptainer.def` also offer the shortcut
 `apptainer run --app cli sauron.sif structure.cif`.*
 
-## Google Colab Notebook
-
-You can also run Sauron in Google Colab without installing anything. Click the badge below to open the notebook in Google Colab and start using it immediately.
-
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gNwkodDXqh3cRf-X7c34P6tslo89kbDF#scrollTo=Y4dnVbJFFH-f)
-
->*Fetching the structures from databases and the visualization features are not available in the Colab notebook.*
-
 ## Output Files
 
 For a given input `structure.pdb`, Sauron generates:

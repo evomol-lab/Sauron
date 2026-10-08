@@ -7,3 +7,18 @@ build/
 __pycache__/
 *.pyc
 .offline-markdown-preview/
+# Structures and Sauron results produced while testing in the repository root
+/*.pdb
+/*.cif
+/*.pqr
+/*.gz
+/*.edges
+/*.nodes
+/*.tsv
+/*.log
+/*_rinpy_summary.json
+/*_rinpy_out/
+/*_rinpy_in/
+/*_ringEdges
+/*_ringNodes
+.pytest_cache/
