@@ -1,0 +1,8 @@
+ALPHAFOLD/BOLTZ STRUCTURES
+	- quitcn1+plumieridine (co-folding), ccr6+ccl20 (co-folding; P51684 - uniprot), cystatin-inhibitor_complex-af2, cystatin-inhibitor_complex-af3, cystatin-inhibitor_complex-boltz
+
+X-RAY STRUCTURES
+	- 1ubq (x-ray; single-chain), 1igy (x-ray; multi-chain), 2cba (x-ray; metal cofactor), 1stp (x-ray; with ligand)
+
+NMR STRUCTURES
+	- 1d3z (nmr; no ligand), 1l2y (nmr; no ligand), 2gb1 (nmr; no ligand), 2ju8 (nmr; with ligand)
